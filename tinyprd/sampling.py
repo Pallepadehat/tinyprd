@@ -1,14 +1,14 @@
-"""Coarse-to-fine generation with a trained NCM.
+"""Groft-til-fint generering med en trænet NCM.
 
     z_hat = 0
-    for k in levels:                      # 8 steps for a 256-word PRD
-        logits = generator(idea, z_hat)   # all codes of level k, in parallel
-        codes  = sample(logits)
-        z_hat += tokenizer.level_contribution(k, codes)
-    words = tokenizer.decode(z_hat).argmax()
+    for k in niveauer:                    # 8 skridt for en PRD på 256 ord
+        logits = generator(idé, z_hat)    # alle koder i niveau k, parallelt
+        koder  = sample(logits)
+        z_hat += tokenizer.level_contribution(k, koder)
+    ord = tokenizer.decode(z_hat).argmax()
 
-With `trajectory=True` we also decode z_hat after every level, which shows
-the PRD coming into focus: first a blurry gist, then sharper detail.
+Med `trajectory=True` afkoder vi også z_hat efter hvert niveau. Så kan man
+se PRD'en komme i fokus: først en sløret essens, så skarpere detaljer.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from .generator import NextConceptTransformer
 
 
 def sample_from_logits(logits: torch.Tensor, temperature: float, top_k: int) -> torch.Tensor:
-    """Pick one id per row of (..., V) logits. Temperature 0 means greedy."""
+    """Vælg ét id pr. række af (..., V) logits. Temperatur 0 = vælg altid det mest sandsynlige."""
     if temperature <= 0:
         return logits.argmax(dim=-1)
     logits = logits / temperature
@@ -37,9 +37,9 @@ def sample_from_logits(logits: torch.Tensor, temperature: float, top_k: int) -> 
 
 @dataclass
 class Generation:
-    tokens: torch.Tensor  # (B, target_len) word ids of the final PRDs
-    nfe: int  # generator forward passes used (= number of levels)
-    # trajectory[k] = word ids decoded after levels 0..k, for inspection
+    tokens: torch.Tensor  # (B, target_len) ord-id'er for de færdige PRD'er
+    nfe: int  # antal forward passes i generatoren (= antal niveauer)
+    # trajectory[k] = ord-id'er afkodet efter niveau 0..k, så man kan kigge med
     trajectory: list[torch.Tensor] = field(default_factory=list)
 
 
@@ -53,7 +53,7 @@ def generate_ncm(
     top_k: int = 0,
     trajectory: bool = False,
 ) -> Generation:
-    """Generate PRDs for a batch of ideas (prompt: (B, prompt_len) word ids)."""
+    """Generer PRD'er for et batch af idéer (prompt: (B, prompt_len) ord-id'er)."""
     batch = prompt.shape[0]
     target_len = tokenizer.position.shape[0]
     z_hat = torch.zeros(batch, target_len, tokenizer.cfg.d_latent, device=prompt.device)

@@ -1,16 +1,16 @@
-"""The comparison model: an ordinary autoregressive (GPT-style) transformer.
+"""Sammenligningsmodellen: en almindelig autoregressiv (GPT-agtig) transformer.
 
-It reads the idea, then writes the PRD one word at a time:
+Den læser idéen og skriver så PRD'en ét ord ad gangen:
 
-    [ idea words ... <pad> | prd word 1, prd word 2, ... <eos> ]
-                             ^ predict each word from everything before it
+    [ idéens ord ... <pad> | prd ord 1, prd ord 2, ... <eos> ]
+                             ^ forudsig hvert ord ud fra alt før det
 
-Same data, same vocabulary, similar size as the NCM generator, so the
-comparison asks one question: does coarse-to-fine generation help?
+Samme data, samme ordforråd og omtrent samme størrelse som NCM-generatoren.
+Sammenligningen stiller derfor ét spørgsmål: hjælper groft-til-fint generering?
 
-For readability, generation re-runs the full sequence for every new word (no
-KV cache). That makes the baseline slower than an optimised one, so compare
-speed using `nfe` (forward passes) rather than wall-clock alone.
+For at holde koden læsbar kører generering hele sekvensen igen for hvert nyt
+ord (ingen KV-cache). Baseline er derfor langsommere end en optimeret model,
+så sammenlign hastighed med `nfe` (antal forward passes), ikke kun med tid.
 """
 
 from __future__ import annotations
@@ -48,18 +48,18 @@ class AutoregressiveBaseline(nn.Module):
         return self.head(self.norm(x))
 
     def forward(self, prompt: torch.Tensor, target: torch.Tensor, pad_id: int) -> torch.Tensor:
-        """Next-word loss on the PRD part only (the idea is given, not predicted)."""
+        """Næste-ord-loss kun på PRD-delen (idéen er givet og skal ikke forudsiges)."""
         sequence = torch.cat([prompt, target], dim=1)
         logits = self.logits(sequence[:, :-1])
         labels = sequence[:, 1:].clone()
-        labels[:, : self.prompt_len - 1] = pad_id  # don't score predictions of the idea
+        labels[:, : self.prompt_len - 1] = pad_id  # idéens ord tæller ikke med i loss
         return F.cross_entropy(logits.transpose(1, 2), labels, ignore_index=pad_id)
 
     @torch.no_grad()
     def generate(
         self, prompt: torch.Tensor, eos_id: int, temperature: float = 0.0, top_k: int = 0
     ) -> tuple[torch.Tensor, int]:
-        """Write PRDs word by word. Returns (target ids, forward passes used)."""
+        """Skriv PRD'er ord for ord. Returnerer (ord-id'er, antal forward passes)."""
         sequence = prompt
         finished = torch.zeros(prompt.shape[0], dtype=torch.bool, device=prompt.device)
         nfe = 0

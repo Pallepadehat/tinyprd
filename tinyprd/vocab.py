@@ -48,7 +48,7 @@ class Vocab:
     # ---- bygge og gemme -------------------------------------------
 
     @classmethod
-    def build(cls, texts: list[str], min_count: int = 1) -> "Vocab":
+    def build(cls, texts: list[str], min_count: int = 1) -> Vocab:
         counts = Counter(word for text in texts for word in split_words(text))
         words = sorted(w for w, c in counts.items() if c >= min_count and w not in SPECIAL_TOKENS)
         return cls(list(SPECIAL_TOKENS) + words)
@@ -57,7 +57,7 @@ class Vocab:
         path.write_text(json.dumps(self.words, indent=0))
 
     @classmethod
-    def load(cls, path: Path) -> "Vocab":
+    def load(cls, path: Path) -> Vocab:
         return cls(json.loads(path.read_text()))
 
     # ---- kode og afkode -----------------------------------------

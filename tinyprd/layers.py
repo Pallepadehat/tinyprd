@@ -13,7 +13,7 @@ import torch.nn.functional as F
 from torch import nn
 
 # --------------------------------------------------------------------------
-# Transformer block
+# Transformer-blok
 # --------------------------------------------------------------------------
 
 

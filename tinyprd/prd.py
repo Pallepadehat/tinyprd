@@ -64,7 +64,7 @@ class PrdRecord:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "PrdRecord":
+    def from_dict(cls, data: dict) -> PrdRecord:
         return cls(**data)
 
     def render(self) -> str:

@@ -1,4 +1,4 @@
-"""Device selection, seeding, datasets as tensors, and checkpoints."""
+"""Valg af enhed (GPU/CPU), seeds, datasæt som tensorer og checkpoints."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ BASELINE_CKPT = "baseline.pt"
 
 
 def pick_device() -> torch.device:
-    """Apple GPU (MPS) if available, then CUDA, then CPU."""
+    """Apples GPU (MPS) hvis den findes, ellers CUDA, ellers CPU."""
     if torch.backends.mps.is_available():
         return torch.device("mps")
     if torch.cuda.is_available():
@@ -46,7 +46,7 @@ def count_parameters(model: torch.nn.Module) -> int:
     return sum(p.numel() for p in model.parameters())
 
 
-# ---- data as tensors -------------------------------------------------------
+# ---- data som tensorer -------------------------------------------------------
 
 
 def load_vocab(data_dir: Path = DATA_DIR) -> Vocab:
@@ -58,14 +58,14 @@ def load_split(name: str, data_dir: Path = DATA_DIR) -> list[PrdRecord]:
 
 
 def encode_records(records: list[PrdRecord], vocab: Vocab, data_cfg: DataConfig) -> tuple[torch.Tensor, torch.Tensor]:
-    """Records -> (prompts (N, prompt_len), targets (N, target_len)) word ids."""
+    """Poster -> (prompts (N, prompt_len), targets (N, target_len)) ord-id'er."""
     prompts = [vocab.encode(r.idea, data_cfg.prompt_len) for r in records]
     targets = [vocab.encode(r.render(), data_cfg.target_len, add_eos=True) for r in records]
     return torch.tensor(prompts), torch.tensor(targets)
 
 
 def batches(n: int, batch_size: int, generator: torch.Generator):
-    """Endless stream of random index batches."""
+    """Uendelig strøm af tilfældige batches af indekser."""
     while True:
         order = torch.randperm(n, generator=generator)
         for start in range(0, n - batch_size + 1, batch_size):
@@ -82,7 +82,7 @@ def save_checkpoint(path: Path, model: torch.nn.Module, **metadata) -> None:
 
 def _load(path: Path) -> dict:
     if not path.exists():
-        raise FileNotFoundError(f"{path} not found. Train it first (see `tinyprd --help`).")
+        raise FileNotFoundError(f"{path} findes ikke. Træn modellen først (se `tinyprd --help`).")
     return torch.load(path, map_location="cpu", weights_only=False)
 
 

@@ -1,30 +1,30 @@
-"""Stage 1: the concept tokenizer (a multiscale residual VQ-VAE).
+"""Trin 1: koncept-tokenizeren (en multiskala residual-VQ-VAE).
 
-It learns to describe a PRD as a coarse-to-fine hierarchy of discrete codes,
-and to turn such a hierarchy back into words.
+Den lærer at beskrive en PRD som et hierarki af koder, fra groft til fint,
+og at lave sådan et hierarki om til ord igen.
 
-    words (256)  --encode-->  latents z (256 x d)
+    ord (256)  --encode-->  latente vektorer z (256 x d)
                                  |
-            level 1:   2 codes   |  "what is this PRD about, roughly?"
-            level 2:   8 codes   |  ... a bit more detail
+            niveau 1:   2 koder  |  "hvad handler PRD'en groft sagt om?"
+            niveau 2:   8 koder  |  ... lidt flere detaljer
               ...                |
-            level 8: 256 codes   v  "exactly which word goes where"
+            niveau 8: 256 koder  v  "præcis hvilket ord står hvor"
                                  |
-    words (256)  <--decode--  reconstruction z_hat (256 x d)
+    ord (256)  <--decode--  rekonstruktion z_hat (256 x d)
 
-Residual quantization, step by step, for level k:
+Residual-kvantisering, trin for trin, for niveau k:
 
-    1. residual  = z - z_hat               what the coarser levels still miss
-    2. u_k       = downsample(residual)    squeeze it to this level's length
-    3. codes_k   = nearest codebook entry for every vector in u_k
-    4. z_hat    += refine(upsample(codebook[codes_k]))
+    1. rest      = z - z_hat               det de grovere niveauer endnu mangler
+    2. u_k       = downsample(rest)        pres det ned til niveauets længde
+    3. koder_k   = nærmeste kode i kodebogen for hver vektor i u_k
+    4. z_hat    += refine(upsample(kodebog[koder_k]))
 
-So level 1 captures the gist with 2 codes, and every later level only adds
-what is still missing. That is what makes the hierarchy coarse-to-fine.
+Niveau 1 fanger altså essensen med 2 koder, og hvert senere niveau tilføjer
+kun det, der stadig mangler. Det er det, der gør hierarkiet groft-til-fint.
 
-Nested dropout (training only): half the time, the decoder only gets the
-first few levels. It still has to reconstruct the whole PRD, so the coarse
-levels are forced to carry the most important information on their own.
+Nested dropout (kun under træning): halvdelen af gangene får decoderen kun
+de første par niveauer. Den skal stadig gendanne hele PRD'en, så de grove
+niveauer tvinges til selv at bære den vigtigste information.
 """
 
 from __future__ import annotations
@@ -38,10 +38,10 @@ from .layers import TransformerBlock, downsample_matrix, resample, upsample_matr
 
 
 class LevelRefiner(nn.Module):
-    """Smooths a level's upsampled contribution with a small convolution.
+    """Glatter et niveaus udstrakte bidrag med en lille foldning (convolution).
 
-    Starts as the identity (zero-initialised conv), and learns a correction.
-    Plays the role of VAR's per-scale "phi" layer.
+    Starter som identiteten (foldningen er nul fra start) og lærer en rettelse.
+    Svarer til VAR-modellens "phi"-lag pr. skala.
     """
 
     def __init__(self, width: int):
@@ -55,10 +55,10 @@ class LevelRefiner(nn.Module):
 
 
 def nearest_code(vectors: torch.Tensor, codebook: torch.Tensor) -> torch.Tensor:
-    """Index of the closest codebook row for every vector.
+    """Indeks for den nærmeste kode i kodebogen, for hver vektor.
 
-    vectors: (B, N, D), codebook: (V, D) -> (B, N) indices.
-    Uses |a - b|^2 = |a|^2 - 2 a.b + |b|^2 to avoid building a (B, N, V, D) tensor.
+    vectors: (B, N, D), codebook: (V, D) -> (B, N) indekser.
+    Bruger |a - b|^2 = |a|^2 - 2 a.b + |b|^2, så vi undgår en kæmpe (B, N, V, D)-tensor.
     """
     distances = (
         vectors.pow(2).sum(-1, keepdim=True)
@@ -72,13 +72,13 @@ class ConceptTokenizer(nn.Module):
     def __init__(self, cfg: ConceptTokenizerConfig, vocab_size: int, target_len: int):
         super().__init__()
         if cfg.level_lens[-1] != target_len:
-            raise ValueError("the finest level must have one code per word (target_len)")
+            raise ValueError("det fineste niveau skal have én kode pr. ord (target_len)")
         self.cfg = cfg
         self.level_lens = tuple(cfg.level_lens)
         self.n_levels = len(self.level_lens)
         width = cfg.d_latent
 
-        # Encoder: words -> one latent vector per word position.
+        # Encoder: ord -> én latent vektor pr. ordposition.
         self.word_embed = nn.Embedding(vocab_size, width)
         self.position = nn.Parameter(torch.randn(target_len, width) * 0.02)
         self.encoder = nn.ModuleList(
@@ -86,42 +86,42 @@ class ConceptTokenizer(nn.Module):
         )
         self.encoder_norm = nn.LayerNorm(width)
 
-        # One codebook and one refiner per level.
+        # Én kodebog og én refiner pr. niveau.
         self.codebooks = nn.ModuleList(nn.Embedding(cfg.codebook_size, width) for _ in self.level_lens)
         self.refiners = nn.ModuleList(LevelRefiner(width) for _ in self.level_lens)
 
-        # Decoder: reconstruction z_hat -> word logits at every position.
+        # Decoder: rekonstruktion z_hat -> ord-sandsynligheder på hver position.
         self.decoder = nn.ModuleList(
             TransformerBlock(width, cfg.n_heads, cfg.dropout) for _ in range(cfg.n_decoder_layers)
         )
         self.decoder_norm = nn.LayerNorm(width)
         self.to_words = nn.Linear(width, vocab_size)
 
-        # Fixed resize matrices between the word grid and each level.
+        # Faste matricer til at skifte længde mellem ord-gitteret og hvert niveau.
         for k, level_len in enumerate(self.level_lens):
             self.register_buffer(f"down_{k}", downsample_matrix(target_len, level_len), persistent=False)
             self.register_buffer(f"up_{k}", upsample_matrix(level_len, target_len), persistent=False)
 
-        # Code usage statistics, used to re-seed codes that are never chosen.
+        # Statistik over brugte koder, så ubrugte koder kan genbruges.
         self.register_buffer("code_usage", torch.zeros(self.n_levels, cfg.codebook_size), persistent=False)
         self._recent_inputs: list[torch.Tensor] = []
 
-    # ---- the three core operations -------------------------------------
+    # ---- de tre kerne-operationer -------------------------------------
 
     def encode(self, tokens: torch.Tensor) -> torch.Tensor:
-        """(B, L) word ids -> (B, L, D) latents."""
+        """(B, L) ord-id'er -> (B, L, D) latente vektorer."""
         x = self.word_embed(tokens) + self.position
         for block in self.encoder:
             x = block(x)
         return self.encoder_norm(x)
 
     def quantize(self, z: torch.Tensor) -> tuple[list[torch.Tensor], list[torch.Tensor], torch.Tensor]:
-        """Residual-quantize latents level by level.
+        """Residual-kvantiser de latente vektorer, niveau for niveau.
 
-        Returns:
-            codes     - list of K tensors, codes[k] has shape (B, level_lens[k])
-            partials  - list of K reconstructions; partials[k] uses levels 0..k
-            vq_loss   - codebook + commitment loss, averaged over levels
+        Returnerer:
+            codes     - liste med K tensorer; codes[k] har formen (B, level_lens[k])
+            partials  - liste med K rekonstruktioner; partials[k] bruger niveau 0..k
+            vq_loss   - kodebogs- + commitment-loss, gennemsnit over niveauer
         """
         z_hat = torch.zeros_like(z)
         codes, partials = [], []
@@ -129,18 +129,18 @@ class ConceptTokenizer(nn.Module):
         self._recent_inputs = []
 
         for k in range(self.n_levels):
-            # What is still missing, at this level's resolution.
+            # Det der stadig mangler, i dette niveaus opløsning.
             u = resample(getattr(self, f"down_{k}"), z - z_hat)
             index = nearest_code(u, self.codebooks[k].weight)
             quantized = self.codebooks[k](index)
 
-            # Codebook loss moves codes toward inputs; commitment loss moves
-            # inputs toward codes (weighted by beta).
+            # Kodebogs-loss flytter koderne mod input; commitment-loss flytter
+            # input mod koderne (vægtet med beta).
             vq_loss = vq_loss + F.mse_loss(quantized, u.detach())
             vq_loss = vq_loss + self.cfg.commitment_beta * F.mse_loss(u, quantized.detach())
 
-            # Straight-through estimator: the forward pass uses the code, the
-            # backward pass sends gradients to u as if quantization were identity.
+            # Straight-through: fremad bruges koden, men baglæns sendes
+            # gradienten til u, som om kvantiseringen slet ikke var der.
             quantized = u + (quantized - u).detach()
 
             z_hat = z_hat + self.refiners[k](resample(getattr(self, f"up_{k}"), quantized))
@@ -154,20 +154,20 @@ class ConceptTokenizer(nn.Module):
         return codes, partials, vq_loss / self.n_levels
 
     def decode(self, z_hat: torch.Tensor) -> torch.Tensor:
-        """(B, L, D) reconstruction -> (B, L, vocab) word logits."""
+        """(B, L, D) rekonstruktion -> (B, L, vocab) ord-logits."""
         x = z_hat + self.position
         for block in self.decoder:
             x = block(x)
         return self.to_words(self.decoder_norm(x))
 
-    # ---- helpers used by the generator ---------------------------------
+    # ---- hjælpere som generatoren bruger ---------------------------------
 
     def level_contribution(self, k: int, codes: torch.Tensor) -> torch.Tensor:
-        """What level k adds to the reconstruction, given its codes (B, len_k)."""
+        """Det niveau k lægger til rekonstruktionen, givet dets koder (B, len_k)."""
         return self.refiners[k](resample(getattr(self, f"up_{k}"), self.codebooks[k](codes)))
 
     def partials_from_codes(self, codes: list[torch.Tensor]) -> list[torch.Tensor]:
-        """Cumulative reconstructions after each level, from codes alone."""
+        """Den samlede rekonstruktion efter hvert niveau, kun ud fra koderne."""
         z_hat, partials = None, []
         for k, level_codes in enumerate(codes):
             contribution = self.level_contribution(k, level_codes)
@@ -177,19 +177,19 @@ class ConceptTokenizer(nn.Module):
 
     @torch.no_grad()
     def tokenize(self, tokens: torch.Tensor) -> list[torch.Tensor]:
-        """Words -> hierarchy of codes (what stage 2 learns to generate)."""
+        """Ord -> hierarki af koder (det trin 2 lærer at generere)."""
         codes, _, _ = self.quantize(self.encode(tokens))
         return codes
 
-    # ---- training ------------------------------------------------------
+    # ---- træning ------------------------------------------------------
 
     def forward(self, tokens: torch.Tensor, pad_id: int) -> dict[str, torch.Tensor]:
-        """Training step: encode, quantize, decode (with nested dropout)."""
+        """Ét træningsskridt: encode, kvantiser, decode (med nested dropout)."""
         z = self.encode(tokens)
         _, partials, vq_loss = self.quantize(z)
 
-        # Nested dropout: per example, decode from all levels, or (with
-        # probability p) only from the first `cutoff` levels.
+        # Nested dropout: for hvert eksempel afkodes fra alle niveauer, eller
+        # (med sandsynlighed p) kun fra de første `cutoff` niveauer.
         batch = tokens.shape[0]
         cutoff = torch.full((batch,), self.n_levels - 1, device=tokens.device)
         if self.training:
@@ -204,11 +204,11 @@ class ConceptTokenizer(nn.Module):
 
     @torch.no_grad()
     def reseed_dead_codes(self) -> float:
-        """Replace codes nobody used since the last call with recent inputs.
+        """Erstat koder, som ingen har brugt siden sidst, med nylige input.
 
-        Without this, many codes are never picked and the codebook shrinks.
-        Called once at the start of training, it also initialises every
-        codebook from real data. Returns the codebook utilization (0 to 1).
+        Uden dette bliver mange koder aldrig valgt, og kodebogen "skrumper".
+        Kaldt én gang i starten af træningen starter den også alle kodebøger
+        ud fra rigtige data. Returnerer andelen af brugte koder (0 til 1).
         """
         used_fraction = (self.code_usage > 0).float().mean().item()
         for k, inputs in enumerate(self._recent_inputs):

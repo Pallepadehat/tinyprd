@@ -1,38 +1,39 @@
-"""Stage 2: the next-concept transformer.
+"""Trin 2: next-concept transformeren.
 
-Given the idea (the prompt) and everything decided so far, predict ALL codes
-of the next level at once.
+Givet idéen (prompten) og alt det, der er besluttet indtil nu, forudsiger
+den ALLE koder i det næste niveau på én gang.
 
-    step 1:  idea + (nothing yet)        -> level 1 codes  (2 codes)
-    step 2:  idea + reconstruction(1)    -> level 2 codes  (8 codes)
+    skridt 1:  idé + (intet endnu)          -> niveau 1 koder  (2 koder)
+    skridt 2:  idé + rekonstruktion(1)      -> niveau 2 koder  (8 koder)
     ...
-    step 8:  idea + reconstruction(1..7) -> level 8 codes  (256 codes)
+    skridt 8:  idé + rekonstruktion(1..7)   -> niveau 8 koder  (256 koder)
 
-Eight forward passes write a 256-word PRD. An autoregressive model needs one
-forward pass per word.
+Otte forward passes skriver en PRD på 256 ord. En autoregressiv model skal
+bruge ét forward pass pr. ord.
 
-What the model sees for level k
-    The frozen concept tokenizer turns the codes of levels 1..k-1 into a
-    reconstruction z_hat (256 x d). We downsample it to level k's length and
-    project it to the model width. "Here is the rough PRD so far, at your
-    resolution; now add the next layer of detail."
+Hvad modellen ser for niveau k
+    Den frosne koncept-tokenizer laver koderne fra niveau 1..k-1 om til en
+    rekonstruktion z_hat (256 x d). Vi presser den ned til niveau k's længde
+    og projicerer den til modellens bredde. Altså: "her er den grove PRD
+    indtil nu, i din opløsning; tilføj nu det næste lag af detaljer".
 
-Training all levels in one pass
-    During training we know every level's true codes, so the inputs for all
-    levels can be built up front and concatenated into one long sequence:
+Træn alle niveauer i ét pass
+    Under træning kender vi de rigtige koder for alle niveauer. Derfor kan
+    input til alle niveauer bygges på forhånd og sættes efter hinanden i én
+    lang sekvens:
 
-        [ idea | level 1 | level 2 | ... | level 8 ]
+        [ idé | niveau 1 | niveau 2 | ... | niveau 8 ]
 
-    A block-diagonal attention mask keeps levels apart: every block may look
-    at the idea and at itself, nothing else. Each level already carries the
-    coarser levels inside its input z_hat, so it needs no other context.
-    The same mask makes inference cheap: step k only runs [ idea | level k ].
+    En blok-diagonal attention-maske holder niveauerne adskilt: hver blok må
+    kigge på idéen og på sig selv, intet andet. Hvert niveau har allerede de
+    grovere niveauer med i sit input z_hat, så det behøver ikke mere.
+    Den samme maske gør generering billig: skridt k kører kun [ idé | niveau k ].
 
-Conditioning corruption
-    At inference the coarse levels are *sampled*, so they contain mistakes.
-    During training we therefore replace a fraction of the conditioning codes
-    with random ones (the targets stay clean), so the model learns to produce
-    good detail on top of imperfect coarse levels.
+Forstyrrelse af betingelsen (corruption)
+    Under generering er de grove niveauer *samplet*, så de indeholder fejl.
+    Derfor bytter vi under træning en del af betingelses-koderne ud med
+    tilfældige (målene forbliver rene). Så lærer modellen at lave gode
+    detaljer oven på grove niveauer, der ikke er perfekte.
 """
 
 from __future__ import annotations
@@ -63,11 +64,11 @@ class NextConceptTransformer(nn.Module):
         self.n_levels = len(level_lens)
         width = cfg.d_model
 
-        # The idea: ordinary word embeddings + positions.
+        # Idéen: almindelige ord-embeddings + positioner.
         self.prompt_embed = nn.Embedding(vocab_size, width)
         self.prompt_position = nn.Parameter(torch.randn(prompt_len, width) * 0.02)
 
-        # The levels: projected reconstruction + "which level" + "where in the PRD".
+        # Niveauerne: projiceret rekonstruktion + "hvilket niveau" + "hvor i PRD'en".
         self.latent_in = nn.Linear(d_latent, width)
         self.level_embed = nn.Embedding(self.n_levels, width)
         self.position = nn.Parameter(torch.randn(target_len, width) * 0.02)
@@ -76,44 +77,44 @@ class NextConceptTransformer(nn.Module):
             TransformerBlock(width, cfg.n_heads, cfg.dropout) for _ in range(cfg.n_layers)
         )
         self.norm = nn.LayerNorm(width)
-        # Each level has its own codebook, so each gets its own output head.
+        # Hvert niveau har sin egen kodebog, så hvert får sit eget output-hoved.
         self.heads = nn.ModuleList(nn.Linear(width, codebook_size) for _ in level_lens)
 
         for k, level_len in enumerate(level_lens):
             self.register_buffer(f"down_{k}", downsample_matrix(target_len, level_len), persistent=False)
             self.register_buffer(f"pos_{k}", finest_positions(level_len, target_len), persistent=False)
 
-    # ---- building the input sequence -----------------------------------
+    # ---- byg input-sekvensen -----------------------------------
 
     def embed_prompt(self, prompt: torch.Tensor) -> torch.Tensor:
         return self.prompt_embed(prompt) + self.prompt_position
 
     def embed_level(self, k: int, z_hat_before: torch.Tensor) -> torch.Tensor:
-        """Input for level k: the reconstruction so far, at level k's length."""
+        """Input til niveau k: rekonstruktionen indtil nu, i niveau k's længde."""
         x = self.latent_in(resample(getattr(self, f"down_{k}"), z_hat_before))
         return x + self.level_embed.weight[k] + self.position[getattr(self, f"pos_{k}")]
 
     def attention_mask(self, segment_ids: torch.Tensor, prompt_is_real: torch.Tensor) -> torch.Tensor:
-        """Block-diagonal mask over [idea | blocks...].
+        """Blok-diagonal maske over [idé | blokke...].
 
-        segment_ids: (T,) with 0 for idea positions and k+1 for level k.
-        prompt_is_real: (B, prompt_len) False at <pad> positions of the idea.
-        Query i may attend to key j if j is a real idea word, or i and j are
-        in the same block. Returns (B, 1, T, T).
+        segment_ids: (T,) med 0 for idéens positioner og k+1 for niveau k.
+        prompt_is_real: (B, prompt_len) False på idéens <pad>-positioner.
+        Position i må kigge på position j, hvis j er et rigtigt ord i idéen,
+        eller hvis i og j er i samme blok. Returnerer (B, 1, T, T).
         """
         same_block = segment_ids[:, None] == segment_ids[None, :]
         key_is_prompt = (segment_ids == 0)[None, :]
         allowed = same_block | key_is_prompt  # (T, T)
 
         batch = prompt_is_real.shape[0]
-        n_levels_part = segment_ids.shape[0] - self.prompt_len
+        n_levels_part = segment_ids.shape[0] - prompt_is_real.shape[1]
         key_is_real = torch.cat(
             [prompt_is_real, prompt_is_real.new_ones(batch, n_levels_part)], dim=1
         )  # (B, T)
         return (allowed[None] & key_is_real[:, None, :])[:, None]
 
     def run(self, prompt: torch.Tensor, pad_id: int, level_inputs: list[tuple[int, torch.Tensor]]):
-        """Run the transformer on [idea | given levels]; return logits per level."""
+        """Kør transformeren på [idé | de givne niveauer]; returner logits pr. niveau."""
         parts = [self.embed_prompt(prompt)]
         segments = [torch.zeros(self.prompt_len, dtype=torch.long)]
         for k, x in level_inputs:
@@ -134,7 +135,7 @@ class NextConceptTransformer(nn.Module):
             start = end
         return logits
 
-    # ---- training: all levels in one pass --------------------------------
+    # ---- træning: alle niveauer i ét pass --------------------------------
 
     def forward(
         self,
@@ -143,30 +144,30 @@ class NextConceptTransformer(nn.Module):
         partials: list[torch.Tensor],
         target_codes: list[torch.Tensor],
     ) -> torch.Tensor:
-        """Cross-entropy over every code of every level.
+        """Cross-entropy over hver kode i hvert niveau.
 
-        partials[k] is the reconstruction after levels 0..k, built from
-        (possibly corrupted) codes. Level k is conditioned on partials[k-1],
-        and level 0 on an all-zero reconstruction.
+        partials[k] er rekonstruktionen efter niveau 0..k, bygget af (måske
+        forstyrrede) koder. Niveau k betinges på partials[k-1], og niveau 0
+        på en rekonstruktion, der kun er nuller.
         """
         before = [torch.zeros_like(partials[0])] + partials[:-1]
         level_inputs = [(k, self.embed_level(k, before[k])) for k in range(self.n_levels)]
         logits = self.run(prompt, pad_id, level_inputs)
 
-        # Every code counts equally (the paper's alpha = 0 weighting).
+        # Hver kode tæller lige meget (artiklens alpha = 0 vægtning).
         all_logits = torch.cat(logits, dim=1)
         all_targets = torch.cat(target_codes, dim=1)
         return F.cross_entropy(all_logits.transpose(1, 2), all_targets)
 
-    # ---- inference: one level at a time ----------------------------------
+    # ---- generering: ét niveau ad gangen ----------------------------------
 
     def predict_level(self, prompt: torch.Tensor, pad_id: int, k: int, z_hat_before: torch.Tensor) -> torch.Tensor:
-        """Logits for every code of level k, in a single forward pass."""
+        """Logits for alle koder i niveau k, i ét enkelt forward pass."""
         return self.run(prompt, pad_id, [(k, self.embed_level(k, z_hat_before))])[0]
 
 
 def corrupt_codes(codes: list[torch.Tensor], codebook_size: int, start: float, end: float) -> list[torch.Tensor]:
-    """Replace a fraction of codes with random ones, `start` at level 1 down to `end`."""
+    """Byt en andel af koderne ud med tilfældige: `start` på niveau 1, faldende til `end`."""
     n = len(codes)
     corrupted = []
     for k, level_codes in enumerate(codes):
