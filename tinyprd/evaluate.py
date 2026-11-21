@@ -101,7 +101,7 @@ def evaluate(n_per_split: int = 60, batch_size: int = 32, runs_dir: Path = RUNS_
                 _sync(device)
                 began = time.perf_counter()
                 if name == "ncm":
-                    out = generate_ncm(tokenizer, generator, batch, vocab.pad_id)
+                    out = generate_ncm(tokenizer, generator, batch)
                     tokens, nfe = out.tokens, out.nfe
                 else:
                     tokens, nfe = baseline.generate(batch, vocab.eos_id)

@@ -17,17 +17,21 @@ Hvad modellen ser for niveau k
     og projicerer den til modellens bredde. Altså: "her er den grove PRD
     indtil nu, i din opløsning; tilføj nu det næste lag af detaljer".
 
-Træn alle niveauer i ét pass
+Træn alle niveauer på én gang
     Under træning kender vi de rigtige koder for alle niveauer. Derfor kan
-    input til alle niveauer bygges på forhånd og sættes efter hinanden i én
-    lang sekvens:
+    input til alle niveauer bygges på forhånd, som om de stod i én lang
+    sekvens:
 
         [ idé | niveau 1 | niveau 2 | ... | niveau 8 ]
 
     En blok-diagonal attention-maske holder niveauerne adskilt: hver blok må
     kigge på idéen og på sig selv, intet andet. Hvert niveau har allerede de
     grovere niveauer med i sit input z_hat, så det behøver ikke mere.
-    Den samme maske gør generering billig: skridt k kører kun [ idé | niveau k ].
+
+    Fordi blokkene ikke kan se hinanden, kan vi lige så godt køre hver blok
+    for sig, [ idé | niveau k ]. Det giver præcis det samme resultat, men er
+    meget billigere, for attention koster længde², og blokkene er korte.
+    Generering gør præcis det samme: skridt k kører kun [ idé | niveau k ].
 
 Forstyrrelse af betingelsen (corruption)
     Under generering er de grove niveauer *samplet*, så de indeholder fejl.
@@ -94,26 +98,22 @@ class NextConceptTransformer(nn.Module):
         x = self.latent_in(resample(getattr(self, f"down_{k}"), z_hat_before))
         return x + self.level_embed.weight[k] + self.position[getattr(self, f"pos_{k}")]
 
-    def attention_mask(self, segment_ids: torch.Tensor, prompt_is_real: torch.Tensor) -> torch.Tensor:
+    @staticmethod
+    def attention_mask(segment_ids: torch.Tensor) -> torch.Tensor:
         """Blok-diagonal maske over [idé | blokke...].
 
         segment_ids: (T,) med 0 for idéens positioner og k+1 for niveau k.
-        prompt_is_real: (B, prompt_len) False på idéens <pad>-positioner.
-        Position i må kigge på position j, hvis j er et rigtigt ord i idéen,
-        eller hvis i og j er i samme blok. Returnerer (B, 1, T, T).
+        Position i må kigge på position j, hvis j er en del af idéen, eller
+        hvis i og j er i samme blok. Returnerer (T, T).
+
+        (Idéens <pad>-positioner maskeres ikke væk. Modellen lærer selv at
+        ignorere dem, og én fælles maske er meget hurtigere på Macens GPU.)
         """
         same_block = segment_ids[:, None] == segment_ids[None, :]
         key_is_prompt = (segment_ids == 0)[None, :]
-        allowed = same_block | key_is_prompt  # (T, T)
+        return same_block | key_is_prompt
 
-        batch = prompt_is_real.shape[0]
-        n_levels_part = segment_ids.shape[0] - prompt_is_real.shape[1]
-        key_is_real = torch.cat(
-            [prompt_is_real, prompt_is_real.new_ones(batch, n_levels_part)], dim=1
-        )  # (B, T)
-        return (allowed[None] & key_is_real[:, None, :])[:, None]
-
-    def run(self, prompt: torch.Tensor, pad_id: int, level_inputs: list[tuple[int, torch.Tensor]]):
+    def run(self, prompt: torch.Tensor, level_inputs: list[tuple[int, torch.Tensor]]):
         """Kør transformeren på [idé | de givne niveauer]; returner logits pr. niveau."""
         parts = [self.embed_prompt(prompt)]
         segments = [torch.zeros(self.prompt_len, dtype=torch.long)]
@@ -123,7 +123,7 @@ class NextConceptTransformer(nn.Module):
         x = torch.cat(parts, dim=1)
         segment_ids = torch.cat(segments).to(prompt.device)
 
-        mask = self.attention_mask(segment_ids, prompt != pad_id)
+        mask = self.attention_mask(segment_ids)
         for block in self.blocks:
             x = block(x, mask)
         x = self.norm(x)
@@ -140,7 +140,6 @@ class NextConceptTransformer(nn.Module):
     def forward(
         self,
         prompt: torch.Tensor,
-        pad_id: int,
         partials: list[torch.Tensor],
         target_codes: list[torch.Tensor],
     ) -> torch.Tensor:
@@ -151,19 +150,25 @@ class NextConceptTransformer(nn.Module):
         på en rekonstruktion, der kun er nuller.
         """
         before = [torch.zeros_like(partials[0])] + partials[:-1]
-        level_inputs = [(k, self.embed_level(k, before[k])) for k in range(self.n_levels)]
-        logits = self.run(prompt, pad_id, level_inputs)
 
-        # Hver kode tæller lige meget (artiklens alpha = 0 vægtning).
-        all_logits = torch.cat(logits, dim=1)
-        all_targets = torch.cat(target_codes, dim=1)
-        return F.cross_entropy(all_logits.transpose(1, 2), all_targets)
+        # Masken er blok-diagonal, så hver blok kan køres for sig: resultatet
+        # er det samme, som hvis alle blokke stod i én lang sekvens, men det er
+        # meget billigere (attention koster længde², og blokkene er korte).
+        total_loss, total_codes = 0.0, 0
+        for k in range(self.n_levels):
+            logits = self.predict_level(prompt, k, before[k])
+            # Hver kode tæller lige meget (artiklens alpha = 0 vægtning).
+            total_loss = total_loss + F.cross_entropy(
+                logits.transpose(1, 2), target_codes[k], reduction="sum"
+            )
+            total_codes += target_codes[k].numel()
+        return total_loss / total_codes
 
     # ---- generering: ét niveau ad gangen ----------------------------------
 
-    def predict_level(self, prompt: torch.Tensor, pad_id: int, k: int, z_hat_before: torch.Tensor) -> torch.Tensor:
+    def predict_level(self, prompt: torch.Tensor, k: int, z_hat_before: torch.Tensor) -> torch.Tensor:
         """Logits for alle koder i niveau k, i ét enkelt forward pass."""
-        return self.run(prompt, pad_id, [(k, self.embed_level(k, z_hat_before))])[0]
+        return self.run(prompt, [(k, self.embed_level(k, z_hat_before))])[0]
 
 
 def corrupt_codes(codes: list[torch.Tensor], codebook_size: int, start: float, end: float) -> list[torch.Tensor]:

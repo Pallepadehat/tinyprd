@@ -48,7 +48,6 @@ def generate_ncm(
     tokenizer: ConceptTokenizer,
     generator: NextConceptTransformer,
     prompt: torch.Tensor,
-    pad_id: int,
     temperature: float = 0.0,
     top_k: int = 0,
     trajectory: bool = False,
@@ -60,7 +59,7 @@ def generate_ncm(
     steps = []
 
     for k in range(generator.n_levels):
-        logits = generator.predict_level(prompt, pad_id, k, z_hat)
+        logits = generator.predict_level(prompt, k, z_hat)
         codes = sample_from_logits(logits, temperature, top_k)
         z_hat = z_hat + tokenizer.level_contribution(k, codes)
         if trajectory:

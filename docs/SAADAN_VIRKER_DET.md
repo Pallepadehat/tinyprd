@@ -140,8 +140,12 @@ En **blok-diagonal attention-maske** sørger for, at hver blok kun kigger på id
      niv3     ██    ·     ·    ██
 ```
 
-Det er nok, fordi hvert niveau allerede har de grovere niveauer med i sit input. Bonus: under
-generering skal modellen kun køre `[ idé | niveau k ]`, hvilket er billigt.
+Det er nok, fordi hvert niveau allerede har de grovere niveauer med i sit input.
+
+**Smart sideeffekt:** Fordi blokkene ikke kan se hinanden, kan hver blok lige så godt køres for
+sig som `[ idé | niveau k ]`. Det giver præcis det samme resultat, men er meget billigere, for
+attention koster *længde²*. Én lang sekvens på 746 positioner koster 746² ≈ 556.000, mens de otte
+korte blokke tilsammen kun koster ca. 210.000. Generering gør præcis det samme.
 
 ### 4.3 Forstyrrelse: lær at tåle egne fejl
 Når modellen genererer, er de grove niveauer dens *egne* gæt, og de har fejl. Hvis den kun havde

@@ -60,11 +60,11 @@ class GeneratorConfig:
     corruption_start: float = 0.5
     corruption_end: float = 0.1
 
-    # træning
-    steps: int = 6000
-    batch_size: int = 64
+    # træning (generator og baseline ser præcis lige mange eksempler)
+    steps: int = 3000
+    batch_size: int = 32
     lr: float = 5e-4
-    warmup_steps: int = 300
+    warmup_steps: int = 200
 
 
 @dataclass
@@ -76,10 +76,10 @@ class BaselineConfig:
     n_heads: int = 8
     dropout: float = 0.1
 
-    steps: int = 6000
-    batch_size: int = 64
+    steps: int = 3000
+    batch_size: int = 32
     lr: float = 5e-4
-    warmup_steps: int = 300
+    warmup_steps: int = 200
 
 
 @dataclass
@@ -98,8 +98,8 @@ def get_preset(name: str) -> Presets:
     if name == "tiny":
         return preset
     if name == "base":
-        preset.generator = GeneratorConfig(d_model=512, n_layers=8, n_heads=8, steps=10000)
-        preset.baseline = BaselineConfig(d_model=512, n_layers=8, n_heads=8, steps=10000)
+        preset.generator = GeneratorConfig(d_model=512, n_layers=8, n_heads=8, steps=6000)
+        preset.baseline = BaselineConfig(d_model=512, n_layers=8, n_heads=8, steps=6000)
         return preset
     if name == "smoke":  # få skridt, kun for at tjekke at koden kører hele vejen
         preset.data.examples_per_combo = 4

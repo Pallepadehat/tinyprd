@@ -20,7 +20,11 @@ from torch import nn
 class SelfAttention(nn.Module):
     """Multi-head self-attention med en valgfri sand/falsk-maske.
 
-    mask: True betyder "må kigge på". Form (T, T) eller (B, 1, T, T).
+    mask: True betyder "må kigge på". Form (T, T), fælles for hele batchet.
+
+    Dropout lægges på attention-*outputtet* og ikke på attention-vægtene.
+    Apples GPU (MPS) har ingen hurtig udgave af attention med dropout, og
+    det gjorde træningen ca. 30 gange langsommere.
     """
 
     def __init__(self, d_model: int, n_heads: int, dropout: float):
@@ -29,17 +33,15 @@ class SelfAttention(nn.Module):
         self.n_heads = n_heads
         self.qkv = nn.Linear(d_model, 3 * d_model)
         self.out = nn.Linear(d_model, d_model)
-        self.dropout = dropout
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
         batch, length, width = x.shape
         head_dim = width // self.n_heads
         # (B, T, 3*D) -> tre tensorer med formen (B, heads, T, head_dim)
         q, k, v = self.qkv(x).view(batch, length, 3, self.n_heads, head_dim).permute(2, 0, 3, 1, 4)
-        y = F.scaled_dot_product_attention(
-            q, k, v, attn_mask=mask, dropout_p=self.dropout if self.training else 0.0
-        )
-        return self.out(y.transpose(1, 2).reshape(batch, length, width))
+        y = F.scaled_dot_product_attention(q, k, v, attn_mask=mask)
+        return self.dropout(self.out(y.transpose(1, 2).reshape(batch, length, width)))
 
 
 class TransformerBlock(nn.Module):

@@ -67,7 +67,7 @@ def _generate(idea: str, temperature: float, show_levels: bool):
     if unknown:
         print(f"(Ukendte ord bliver til <unk>: {', '.join(sorted(set(unknown)))})\n", file=sys.stderr)
     prompt = torch.tensor([vocab.encode(idea, prompt_len)], device=device)
-    out = generate_ncm(tokenizer, generator, prompt, vocab.pad_id, temperature=temperature, top_k=20, trajectory=show_levels)
+    out = generate_ncm(tokenizer, generator, prompt, temperature=temperature, top_k=20, trajectory=show_levels)
     if show_levels:
         for k, tokens in enumerate(out.trajectory):
             print(f"──────── efter niveau {k + 1}/{len(out.trajectory)} "

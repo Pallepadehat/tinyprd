@@ -90,9 +90,10 @@ def test_tokenizer_training_step_has_gradients():
 def test_mask_is_block_diagonal():
     _, generator = small_models()
     segments = torch.tensor([0, 0, 1, 1, 2, 2, 2])  # 2 idé-ord, niveau 1 (2), niveau 2 (3)
-    mask = generator.attention_mask(segments, torch.tensor([[True, False]]))[0, 0]
+    mask = generator.attention_mask(segments)
     assert mask[2, 3] and not mask[2, 4]  # niveau 1 ser sig selv, ikke niveau 2
-    assert mask[5, 0] and not mask[5, 1]  # alle ser rigtige idé-ord, ikke <pad>
+    assert mask[5, 0] and mask[5, 1]  # alle må se idéen
+    assert not mask[0, 2]  # idéen ser ikke niveauerne
 
 
 def test_generator_trains_and_generates():
@@ -100,10 +101,10 @@ def test_generator_trains_and_generates():
     prompt = torch.randint(1, 50, (2, 6))
     codes = tokenizer.tokenize(torch.randint(0, 50, (2, LEVELS[-1])))
     partials = tokenizer.partials_from_codes(corrupt_codes(codes, 32, 0.5, 0.1))
-    loss = generator(prompt, 0, partials, codes)
+    loss = generator(prompt, partials, codes)
     assert loss.item() > 0
 
-    out = generate_ncm(tokenizer.eval(), generator.eval(), prompt, pad_id=0, trajectory=True)
+    out = generate_ncm(tokenizer.eval(), generator.eval(), prompt, trajectory=True)
     assert out.tokens.shape == (2, LEVELS[-1])
     assert out.nfe == len(LEVELS) == len(out.trajectory)
 

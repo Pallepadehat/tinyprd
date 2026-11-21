@@ -183,7 +183,7 @@ def train_generator(preset: Presets, runs_dir: Path = RUNS_DIR) -> NextConceptTr
         with torch.no_grad():
             partials = tokenizer.partials_from_codes(noisy)
 
-        loss = model(prompts[idx], vocab.pad_id, partials, clean)
+        loss = model(prompts[idx], partials, clean)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
