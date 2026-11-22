@@ -8,8 +8,6 @@ from pathlib import Path
 
 import torch
 
-from .baseline import AutoregressiveBaseline
-from .concept_tokenizer import ConceptTokenizer
 from .config import (
     DATA_DIR,
     RUNS_DIR,
@@ -18,10 +16,12 @@ from .config import (
     DataConfig,
     GeneratorConfig,
 )
-from .generator import NextConceptTransformer
-from .prd import PrdRecord
-from .synth import load_records
-from .vocab import Vocab
+from .data.prd import PrdRecord
+from .data.synth import load_records
+from .data.vocab import Vocab
+from .models.baseline import AutoregressiveBaseline
+from .models.concept_tokenizer import ConceptTokenizer
+from .models.generator import NextConceptTransformer
 
 TOKENIZER_CKPT = "concept_tokenizer.pt"
 GENERATOR_CKPT = "generator.pt"

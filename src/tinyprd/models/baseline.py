@@ -19,9 +19,9 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from .config import BaselineConfig
+from ..config import BaselineConfig
+from ..sampling import sample_from_logits
 from .layers import TransformerBlock
-from .sampling import sample_from_logits
 
 
 class AutoregressiveBaseline(nn.Module):

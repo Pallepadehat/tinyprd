@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # src/tinyprd/config.py → projektets rod
 DATA_DIR = PROJECT_ROOT / "data"
 RUNS_DIR = PROJECT_ROOT / "runs"
 

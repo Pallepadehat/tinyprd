@@ -108,7 +108,23 @@ tinyprd train-all    # træner tokenizer → generator → baseline, og gemmer i
 > Vil du bare se, om alt virker? Kør `tinyprd data --preset smoke && tinyprd train-all --preset smoke`.
 > Det tager under et minut, men modellen bliver ikke god.
 
-### 2. Brug modellen
+### 2. Prøv den i browseren 🌐
+
+```bash
+tinyprd serve --open     # åbner http://localhost:8000
+```
+
+Her kan du:
+- skrive en idé (eller klikke på et eksempel) og få en PRD,
+- **trække i niveau-skyderen** eller trykke ▶ og se PRD'en komme i fokus, fra 2 koder til 256,
+- se kritikerens point og råd,
+- sammenligne med ord-for-ord modellen, side om side, med antal forward passes og tid,
+- indsætte din egen PRD under "Bedøm din egen PRD" og få point.
+
+Serveren bruger kun Pythons indbyggede `http.server`, så der skal ikke installeres noget ekstra.
+Den kører kun på din egen maskine.
+
+### 3. Brug modellen i terminalen
 
 ```bash
 # Form en idé: problem, succesmål, scope og spørgsmål
@@ -125,6 +141,9 @@ tinyprd critique min_prd.md
 
 # Sammenlign NCM med baseline på testsættene
 tinyprd evaluate
+
+# Start webinterfacet
+tinyprd serve
 ```
 
 > **Bemærk:** Modellen kender kun ordene fra sit træningsdata (16 produktområder × 12 slags
@@ -134,26 +153,35 @@ tinyprd evaluate
 
 ```text
 tinyprd/
-├── tinyprd/
-│   ├── prd.py                 PRD'ens format
-│   ├── synth.py               syntetisk datasæt (domæner × mønstre)
-│   ├── vocab.py               tekst ↔ ord-id'er
-│   ├── config.py              alle hyperparametre
-│   ├── layers.py              transformer-blok + pres/stræk-matricer
-│   ├── concept_tokenizer.py   TRIN 1: tekst ↔ hierarki af koder
-│   ├── generator.py           TRIN 2: forudsiger koder niveau for niveau
-│   ├── sampling.py            generering fra groft til fint
-│   ├── baseline.py            almindelig ord-for-ord model (sammenligning)
-│   ├── training.py            træningsløkker
-│   ├── critic.py              regelbaseret PRD-kritiker
-│   ├── evaluate.py            NCM mod baseline
-│   └── cli.py                 kommandoerne `tinyprd` og `prd`
-├── tests/                     pytest
-└── docs/
-    ├── SAADAN_VIRKER_DET.md   modellen forklaret fra bunden
-    ├── EKSPERIMENT.md         forskningsspørgsmål, metode og resultater
-    ├── PRD_PRINCIPPER.md      hvad gør en PRD god?
-    └── ORDBOG.md              fagord forklaret
+├── src/tinyprd/
+│   ├── data/
+│   │   ├── prd.py                 PRD'ens format
+│   │   ├── synth.py               syntetisk datasæt (domæner × mønstre)
+│   │   └── vocab.py               tekst ↔ ord-id'er
+│   ├── models/
+│   │   ├── layers.py              transformer-blok + pres/stræk-matricer
+│   │   ├── concept_tokenizer.py   TRIN 1: tekst ↔ hierarki af koder
+│   │   ├── generator.py           TRIN 2: forudsiger koder niveau for niveau
+│   │   └── baseline.py            almindelig ord-for-ord model (sammenligning)
+│   ├── web/
+│   │   ├── service.py             modellerne pakket ind til hjemmesiden
+│   │   ├── server.py              lille HTTP-server (`tinyprd serve`)
+│   │   └── static/index.html      selve hjemmesiden
+│   ├── config.py                  alle hyperparametre
+│   ├── runtime.py                 enhed, seeds og checkpoints
+│   ├── sampling.py                generering fra groft til fint
+│   ├── training.py                træningsløkker
+│   ├── critic.py                  regelbaseret PRD-kritiker
+│   ├── evaluate.py                NCM mod baseline
+│   └── cli.py                     kommandoerne `tinyprd` og `prd`
+├── tests/                         pytest, én fil pr. del (data, modeller, kritiker, web)
+├── docs/
+│   ├── SAADAN_VIRKER_DET.md       modellen forklaret fra bunden
+│   ├── EKSPERIMENT.md             forskningsspørgsmål, metode og resultater
+│   ├── PRD_PRINCIPPER.md          hvad gør en PRD god?
+│   └── ORDBOG.md                  fagord forklaret
+├── data/                          (laves af `tinyprd data`, ikke i git)
+└── runs/                          (trænede modeller, ikke i git)
 ```
 
 Al kode har dokumentation på dansk. Variabel- og funktionsnavne er på engelsk, som det er

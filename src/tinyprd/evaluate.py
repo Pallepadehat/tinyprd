@@ -29,7 +29,7 @@ import torch
 
 from .config import RUNS_DIR, DataConfig
 from .critic import critique
-from .prd import parse_sections
+from .data.prd import parse_sections
 from .runtime import (
     encode_records,
     load_baseline,

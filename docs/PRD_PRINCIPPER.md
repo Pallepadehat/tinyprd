@@ -3,9 +3,9 @@
 Hvad gør en PRD god? Denne side samler de principper, som TinyPRD er bygget efter.
 De bruges tre steder:
 
-1. **Datasættet** (`tinyprd/synth.py`) er skrevet, så hvert eksempel følger principperne.
-2. **PRD-formatet** (`tinyprd/prd.py`) har en sektion for hvert princip.
-3. **Kritikeren** (`tinyprd/critic.py`) giver point efter principperne.
+1. **Datasættet** (`src/tinyprd/data/synth.py`) er skrevet, så hvert eksempel følger principperne.
+2. **PRD-formatet** (`src/tinyprd/data/prd.py`) har en sektion for hvert princip.
+3. **Kritikeren** (`src/tinyprd/critic.py`) giver point efter principperne.
 
 > **Hvad er en PRD?** PRD står for *Product Requirements Document*. Det er et kort dokument, der
 > forklarer *hvorfor* noget skal bygges, og *hvad* der tæller som en succes. Så ved hele teamet

@@ -64,7 +64,7 @@ De trænes hver for sig: først trin 1, som så fryses, og derefter trin 2.
 
 ## 3. Trin 1: koncept-tokenizeren
 
-Kode: [`tinyprd/concept_tokenizer.py`](../tinyprd/concept_tokenizer.py)
+Kode: [`src/tinyprd/models/concept_tokenizer.py`](../src/tinyprd/models/concept_tokenizer.py)
 
 ### 3.1 Fra ord til vektorer
 Hvert ord bliver til en vektor med 128 tal. En lille transformer (encoderen) lader ordene "tale
@@ -112,7 +112,7 @@ de grove niveauer at bære den vigtigste information.
 
 ## 4. Trin 2: next-concept transformeren
 
-Kode: [`tinyprd/generator.py`](../tinyprd/generator.py)
+Kode: [`src/tinyprd/models/generator.py`](../src/tinyprd/models/generator.py)
 
 ### 4.1 Input
 For niveau k ser modellen:
@@ -155,7 +155,7 @@ modellen skal gætte, er stadig de rigtige koder.
 
 ### 4.4 Generering
 
-Kode: [`tinyprd/sampling.py`](../tinyprd/sampling.py)
+Kode: [`src/tinyprd/sampling.py`](../src/tinyprd/sampling.py)
 
 ```text
 rekonstruktion = 0
@@ -172,7 +172,7 @@ PRD'en kommer i fokus.
 
 ## 5. Baseline: til sammenligning
 
-Kode: [`tinyprd/baseline.py`](../tinyprd/baseline.py)
+Kode: [`src/tinyprd/models/baseline.py`](../src/tinyprd/models/baseline.py)
 
 En almindelig autoregressiv transformer i samme størrelse, trænet på præcis de samme data. Den
 skriver ét ord ad gangen. Den er med, så vi kan svare på projektets forskningsspørgsmål: **hjælper
@@ -182,23 +182,24 @@ groft-til-fint generering en lille model?** Se [EKSPERIMENT.md](EKSPERIMENT.md).
 
 ## 6. Kort over koden
 
-Læs gerne filerne i denne rækkefølge:
+Koden ligger i `src/tinyprd/`, delt i `data/`, `models/` og `web/`. Læs gerne filerne i denne rækkefølge:
 
 | Fil | Hvad den gør |
 |---|---|
-| [`prd.py`](../tinyprd/prd.py) | Hvordan en PRD ser ud, som data og som tekst |
-| [`synth.py`](../tinyprd/synth.py) | Laver det syntetiske datasæt (domæner × mønstre) |
-| [`vocab.py`](../tinyprd/vocab.py) | Tekst ↔ ord-id'er |
-| [`config.py`](../tinyprd/config.py) | Alle hyperparametre |
-| [`layers.py`](../tinyprd/layers.py) | Transformer-blok og pres/stræk-matricer |
-| [`concept_tokenizer.py`](../tinyprd/concept_tokenizer.py) | **Trin 1**: tekst ↔ hierarki af koder |
-| [`generator.py`](../tinyprd/generator.py) | **Trin 2**: forudsiger koderne niveau for niveau |
-| [`sampling.py`](../tinyprd/sampling.py) | Generering fra groft til fint |
-| [`baseline.py`](../tinyprd/baseline.py) | Den autoregressive sammenligningsmodel |
-| [`training.py`](../tinyprd/training.py) | Træningsløkkerne |
-| [`critic.py`](../tinyprd/critic.py) | Giver en PRD point efter principperne |
-| [`evaluate.py`](../tinyprd/evaluate.py) | Sammenligner NCM og baseline |
-| [`cli.py`](../tinyprd/cli.py) | Kommandoerne `tinyprd` og `prd` |
+| [`prd.py`](../src/tinyprd/data/prd.py) | Hvordan en PRD ser ud, som data og som tekst |
+| [`synth.py`](../src/tinyprd/data/synth.py) | Laver det syntetiske datasæt (domæner × mønstre) |
+| [`vocab.py`](../src/tinyprd/data/vocab.py) | Tekst ↔ ord-id'er |
+| [`config.py`](../src/tinyprd/config.py) | Alle hyperparametre |
+| [`layers.py`](../src/tinyprd/models/layers.py) | Transformer-blok og pres/stræk-matricer |
+| [`concept_tokenizer.py`](../src/tinyprd/models/concept_tokenizer.py) | **Trin 1**: tekst ↔ hierarki af koder |
+| [`generator.py`](../src/tinyprd/models/generator.py) | **Trin 2**: forudsiger koderne niveau for niveau |
+| [`sampling.py`](../src/tinyprd/sampling.py) | Generering fra groft til fint |
+| [`baseline.py`](../src/tinyprd/models/baseline.py) | Den autoregressive sammenligningsmodel |
+| [`training.py`](../src/tinyprd/training.py) | Træningsløkkerne |
+| [`critic.py`](../src/tinyprd/critic.py) | Giver en PRD point efter principperne |
+| [`evaluate.py`](../src/tinyprd/evaluate.py) | Sammenligner NCM og baseline |
+| [`cli.py`](../src/tinyprd/cli.py) | Kommandoerne `tinyprd` og `prd` |
+| [`web/`](../src/tinyprd/web) | Webinterfacet (`tinyprd serve`) |
 
 ## 7. Forskelle fra den originale NCM-artikel
 

@@ -25,7 +25,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from .prd import parse_sections
+from .data.prd import parse_sections
 
 # Ord der afslører en løsning. De hører ikke hjemme i problemformuleringen.
 SOLUTION_WORDS = {

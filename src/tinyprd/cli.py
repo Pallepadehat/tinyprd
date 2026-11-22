@@ -6,6 +6,7 @@
     tinyprd generate "idé" --levels   vis hvordan PRD'en bliver skarpere niveau for niveau
     tinyprd critique fil.md       giv din egen PRD point
     tinyprd evaluate              sammenlign NCM med baseline
+    tinyprd serve                 åbn webinterfacet på http://localhost:8000
 
     prd "idé"                     kort version: forme idéen (problem, mål, scope, spørgsmål)
     prd "idé" --full              hele PRD'en
@@ -21,12 +22,12 @@ import torch
 
 from .config import DATA_DIR, get_preset
 from .critic import critique
-from .prd import parse_sections
+from .data.prd import parse_sections
 
 
 def cmd_data(args) -> None:
-    from .synth import build_dataset, load_records
-    from .vocab import Vocab
+    from .data.synth import build_dataset, load_records
+    from .data.vocab import Vocab
 
     preset = get_preset(args.preset)
     sizes = build_dataset(DATA_DIR, examples_per_combo=preset.data.examples_per_combo, seed=preset.data.seed)
@@ -96,6 +97,12 @@ def cmd_evaluate(args) -> None:
     evaluate(n_per_split=args.n)
 
 
+def cmd_serve(args) -> None:
+    from .web.server import serve
+
+    serve(args.host, args.port, open_browser=args.open)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tinyprd", description="TinyPRD: en lille next-concept model der former produktidéer til PRD'er.")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -122,6 +129,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("evaluate", help="sammenlign NCM med baseline på testsættene")
     p.add_argument("--n", type=int, default=60, help="antal eksempler pr. testsæt")
     p.set_defaults(func=cmd_evaluate)
+
+    p = sub.add_parser("serve", help="start webinterfacet i browseren")
+    p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--host", default="127.0.0.1", help="127.0.0.1 = kun din egen maskine")
+    p.add_argument("--open", action="store_true", help="åbn browseren automatisk")
+    p.set_defaults(func=cmd_serve)
     return parser
 
 

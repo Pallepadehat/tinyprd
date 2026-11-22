@@ -18,10 +18,10 @@ from pathlib import Path
 
 import torch
 
-from .baseline import AutoregressiveBaseline
-from .concept_tokenizer import ConceptTokenizer
 from .config import RUNS_DIR, Presets, to_dict
-from .generator import NextConceptTransformer, corrupt_codes
+from .models.baseline import AutoregressiveBaseline
+from .models.concept_tokenizer import ConceptTokenizer
+from .models.generator import NextConceptTransformer, corrupt_codes
 from .runtime import (
     BASELINE_CKPT,
     GENERATOR_CKPT,

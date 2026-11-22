@@ -46,7 +46,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from .config import GeneratorConfig
+from ..config import GeneratorConfig
 from .layers import TransformerBlock, downsample_matrix, finest_positions, resample
 
 

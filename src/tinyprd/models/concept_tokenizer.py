@@ -33,7 +33,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from .config import ConceptTokenizerConfig
+from ..config import ConceptTokenizerConfig
 from .layers import TransformerBlock, downsample_matrix, resample, upsample_matrix
 
 

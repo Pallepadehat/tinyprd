@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "En lille Next-Concept Model (NCM), der former rodede produktidéer til gode PRD'er."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 dependencies = ["torch>=2.2", "numpy"]
 
 [project.optional-dependencies]
@@ -18,8 +18,11 @@ dev = ["pytest", "ruff"]
 tinyprd = "tinyprd.cli:main"
 prd = "tinyprd.cli:prd_main"
 
-[tool.setuptools]
-packages = ["tinyprd"]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"tinyprd.web" = ["static/*"]
 
 [tool.ruff]
 line-length = 120

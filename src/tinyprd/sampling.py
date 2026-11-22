@@ -26,8 +26,8 @@ from itertools import pairwise
 import torch
 import torch.nn.functional as F
 
-from .concept_tokenizer import ConceptTokenizer
-from .generator import NextConceptTransformer
+from .models.concept_tokenizer import ConceptTokenizer
+from .models.generator import NextConceptTransformer
 
 
 def sample_from_logits(logits: torch.Tensor, temperature: float, top_k: int) -> torch.Tensor:

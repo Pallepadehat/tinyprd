@@ -15,7 +15,7 @@ Vi ser på tre ting:
 ## Opsætning
 
 ### Data
-Syntetisk datasæt fra [`synth.py`](../tinyprd/synth.py):
+Syntetisk datasæt fra [`synth.py`](../src/tinyprd/data/synth.py):
 **16 produktområder × 12 slags problemer = 192 kombinationer.**
 
 | Del | Antal | Beskrivelse |
@@ -42,7 +42,7 @@ Generatoren og baseline ser **præcis lige mange eksempler** (ca. 14 epochs).
 
 | Mål | Betydning |
 |---|---|
-| **critic** | Kritikerens score 0-10 ([critic.py](../tinyprd/critic.py)): problem, mål, scope, non-goals, spørgsmål, længde |
+| **critic** | Kritikerens score 0-10 ([critic.py](../src/tinyprd/critic.py)): problem, mål, scope, non-goals, spørgsmål, længde |
 | **word_f1** | Ord-overlap med facit (0-1). *Loftet er under 1*, for der findes flere rigtige formuleringer af samme PRD. |
 | **intent** | Andel hvor intent-linjen ("dashboard sharing") er helt rigtig. Den viser, om modellen har *forstået* idéen. |
 | **nfe** | Forward passes pr. PRD |
@@ -180,7 +180,7 @@ at PyTorchs attention på Apples GPU (MPS) **ikke har en hurtig udgave med dropo
 | Med dropout på attention-vægtene | 46,6 s |
 | Uden (dropout på outputtet i stedet) | 1,4 s |
 
-Løsning: dropout lægges på attention-*outputtet* ([`layers.py`](../tinyprd/layers.py)).
+Løsning: dropout lægges på attention-*outputtet* ([`layers.py`](../src/tinyprd/models/layers.py)).
 Derudover er en fælles maske for hele batchet ca. 5 gange hurtigere end en maske pr. eksempel.
 
 ### 2. Blok-diagonal attention kan køres blok for blok
