@@ -98,7 +98,8 @@ def parse_sections(text: str) -> dict[str, list[str]]:
     Virker også på modellens output, så den er tilgivende: ukendte
     overskrifter beholdes, tekst før første overskrift ignoreres, og
     punkttegn ("- ") fjernes. En overskrift midt på en linje ("... ## users")
-    flyttes ned på sin egen linje, for det sker af og til i modellens output.
+    flyttes ned på sin egen linje, og en linje med kun et sektionsnavn
+    ("- scope") bliver en overskrift. Begge dele sker af og til i modellens output.
     """
     text = re.sub(r"[ \t]*##[ \t]*", "\n## ", text)
     sections: dict[str, list[str]] = {}
@@ -107,6 +108,9 @@ def parse_sections(text: str) -> dict[str, list[str]]:
         line = raw_line.strip()
         if not line:
             continue
+        bare = line.removeprefix("-").strip()
+        if bare in SECTION_ORDER and current is not None:
+            line = "## " + bare  # modellen tabte "##": en linje med kun et sektionsnavn er en overskrift
         if line.startswith("##"):
             current, rest = _split_heading(line.lstrip("#").strip())
             sections.setdefault(current, [])

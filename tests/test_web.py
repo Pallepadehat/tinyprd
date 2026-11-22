@@ -48,7 +48,7 @@ def test_http_server_end_to_end(service):
     try:
         assert b"TinyPRD" in urllib.request.urlopen(base + "/").read()
         assert json.loads(urllib.request.urlopen(base + "/api/info").read())["levels"] == list(SMALL_LEVELS)
-        assert post("/api/generate", {"idea": "developers wait"})["ncm"]["text"] is not None
+        assert post("/api/generate", {"idea": "developers wait"})["ncm"]["markdown"].startswith("# PRD:")
         assert post("/api/critique", {"text": "## problem\nfoo"})["scores"]["non-goals"] == 0
         with pytest.raises(urllib.error.HTTPError) as error:
             post("/api/generate", {"idea": ""})

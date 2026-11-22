@@ -114,24 +114,25 @@ tinyprd train-all    # træner tokenizer → generator → baseline, og gemmer i
 tinyprd serve --open     # åbner http://localhost:8000
 ```
 
-Her kan du:
-- skrive en idé (eller klikke på et eksempel) og få en PRD,
-- **trække i niveau-skyderen** eller trykke ▶ og se PRD'en komme i fokus, fra 2 koder til 256,
-- se kritikerens point og råd,
-- sammenligne med ord-for-ord modellen, side om side, med antal forward passes og tid,
-- indsætte din egen PRD under "Bedøm din egen PRD" og få point.
+Siden ligner en chat: skriv en idé (eller klik på et forslag), og PRD'en kommer i fokus lag for lag
+i stedet for ord for ord. Under hvert svar kan du:
 
-Serveren bruger kun Pythons indbyggede `http.server`, så der skal ikke installeres noget ekstra.
-Den kører kun på din egen maskine.
+- **kopiere** PRD'en som Markdown eller **downloade den som `prd.md`**,
+- åbne **Lagene** og trække i skyderen for at se teksten efter hvert niveau, fra 2 koder til 256,
+- se **kritikerens** point og råd,
+- **sammenligne** med ord-for-ord modellen, side om side.
+
+Indsætter du en tekst, der starter med `#`, får du i stedet kritikerens point på din egen PRD.
+Serveren bruger kun Pythons indbyggede `http.server` og kører kun på din egen maskine.
 
 ### 3. Brug modellen i terminalen
 
 ```bash
-# Form en idé: problem, succesmål, scope og spørgsmål
+# Form en idé, og gem den færdige PRD som prd.md
 prd "what if we built a tool that reminds teachers before assignments are due?"
 
-# Hele PRD'en
-prd "what if we built a tool that reminds teachers before assignments are due?" --full
+# Vis hele PRD'en som Markdown, og gem den et andet sted
+prd "what if we built a tool that reminds teachers before assignments are due?" --full --out teachers.md
 
 # Se PRD'en komme i fokus, niveau for niveau
 tinyprd generate "idea: something that lets analysts share dashboards with coworkers." --levels
@@ -172,6 +173,7 @@ tinyprd/
 │   ├── sampling.py                generering fra groft til fint
 │   ├── training.py                træningsløkker
 │   ├── critic.py                  regelbaseret PRD-kritiker
+│   ├── markdown.py                gør output til en færdig prd.md
 │   ├── evaluate.py                NCM mod baseline
 │   └── cli.py                     kommandoerne `tinyprd` og `prd`
 ├── tests/                         pytest, én fil pr. del (data, modeller, kritiker, web)

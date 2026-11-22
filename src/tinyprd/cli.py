@@ -8,8 +8,9 @@
     tinyprd evaluate              sammenlign NCM med baseline
     tinyprd serve                 åbn webinterfacet på http://localhost:8000
 
-    prd "idé"                     kort version: forme idéen (problem, mål, scope, spørgsmål)
-    prd "idé" --full              hele PRD'en
+    prd "idé"                     form idéen og gem den færdige PRD som prd.md
+    prd "idé" --out min_prd.md    gem et andet sted
+    prd "idé" --full              vis hele PRD'en som Markdown i terminalen
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ import torch
 from .config import DATA_DIR, get_preset
 from .critic import critique
 from .data.prd import parse_sections
+from .markdown import to_markdown
 
 
 def cmd_data(args) -> None:
@@ -78,12 +80,29 @@ def _generate(idea: str, temperature: float, show_levels: bool):
     return vocab.decode(out.tokens[0].tolist()), out.nfe
 
 
+def _markdown(idea: str, text: str, nfe: int) -> str:
+    score = critique(text).overall
+    return to_markdown(text, idea, generated_by=f"TinyPRD (NCM, {nfe} forward passes) · critic {score:.1f}/10")
+
+
+def _save(markdown: str, wanted: str) -> Path:
+    """Gem uden at overskrive: findes prd.md, bliver det prd-2.md, prd-3.md …"""
+    path, n = Path(wanted), 2
+    while path.exists():
+        path = Path(wanted).with_stem(f"{Path(wanted).stem}-{n}")
+        n += 1
+    path.write_text(markdown)
+    return path
+
+
 def cmd_generate(args) -> None:
     text, nfe = _generate(args.idea, args.temperature, args.levels)
     if not args.levels:
         print(text)
     print(f"\n──────── kritiker ({nfe} forward passes) ────────")
     print(critique(text).report())
+    if args.out:
+        print(f"\nGemt som Markdown: {_save(_markdown(args.idea, text, nfe), args.out)}")
 
 
 def cmd_critique(args) -> None:
@@ -120,6 +139,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("idea")
     p.add_argument("--levels", action="store_true", help="vis teksten efter hvert niveau")
     p.add_argument("--temperature", type=float, default=0.0, help="0 = deterministisk, fx 0.8 = mere variation")
+    p.add_argument("--out", help="gem PRD'en som Markdown, fx prd.md")
     p.set_defaults(func=cmd_generate)
 
     p = sub.add_parser("critique", help="giv en PRD point (fil eller - for stdin)")
@@ -158,13 +178,17 @@ SHAPE_VIEW = (
 def prd_main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="prd", description="Form en produktidé, før du skriver PRD'en.")
     parser.add_argument("idea")
-    parser.add_argument("--full", action="store_true", help="vis hele PRD'en")
+    parser.add_argument("--full", action="store_true", help="vis hele PRD'en som Markdown")
+    parser.add_argument("--out", default="prd.md", help="hvor PRD'en gemmes (standard: prd.md)")
     parser.add_argument("--temperature", type=float, default=0.0)
     args = parser.parse_args(argv)
 
-    text, _ = _generate(args.idea, args.temperature, show_levels=False)
+    text, nfe = _generate(args.idea, args.temperature, show_levels=False)
+    markdown = _markdown(args.idea, text, nfe)
+    saved = _save(markdown, args.out)
     if args.full:
-        print(text)
+        print(markdown)
+        print(f"Gemt: {saved}")
         return
 
     sections = parse_sections(text)
@@ -179,7 +203,7 @@ def prd_main(argv: list[str] | None = None) -> None:
         for line in lines:
             print(f"• {line}" if len(lines) > 1 or key not in ("problem", "appetite") else line)
         print()
-    print("Kør med --full for at få hele PRD'en.")
+    print(f"Hele PRD'en er gemt som Markdown: {saved}")
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ Pakken er delt op sådan:
     sampling.py  generering fra groft til fint
     training.py  træningsløkkerne
     critic.py    regelbaseret PRD-kritiker
+    markdown.py  gør output til en færdig prd.md
     evaluate.py  NCM mod baseline
     cli.py       kommandoerne `tinyprd` og `prd`
 """

@@ -197,6 +197,7 @@ Koden ligger i `src/tinyprd/`, delt i `data/`, `models/` og `web/`. Læs gerne f
 | [`baseline.py`](../src/tinyprd/models/baseline.py) | Den autoregressive sammenligningsmodel |
 | [`training.py`](../src/tinyprd/training.py) | Træningsløkkerne |
 | [`critic.py`](../src/tinyprd/critic.py) | Giver en PRD point efter principperne |
+| [`markdown.py`](../src/tinyprd/markdown.py) | Gør modellens output til en færdig `prd.md` |
 | [`evaluate.py`](../src/tinyprd/evaluate.py) | Sammenligner NCM og baseline |
 | [`cli.py`](../src/tinyprd/cli.py) | Kommandoerne `tinyprd` og `prd` |
 | [`web/`](../src/tinyprd/web) | Webinterfacet (`tinyprd serve`) |

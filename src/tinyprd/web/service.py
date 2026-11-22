@@ -16,6 +16,7 @@ import torch
 from ..critic import Critique, critique
 from ..data.prd import parse_sections
 from ..data.vocab import Vocab
+from ..markdown import to_markdown
 from ..models.baseline import AutoregressiveBaseline
 from ..models.concept_tokenizer import ConceptTokenizer
 from ..models.generator import NextConceptTransformer
@@ -95,9 +96,9 @@ class PrdService:
             result = {
                 "idea": idea,
                 "unknown_words": sorted(set(self.vocab.unknown_words(idea))),
-                "ncm": self._describe(text, out.nfe, ncm_seconds),
+                "ncm": self._describe(idea, text, out.nfe, ncm_seconds, "NCM"),
                 "levels": [
-                    {"codes": n, "text": self.vocab.decode(step[0].tolist())}
+                    {"codes": n, "markdown": to_markdown(self.vocab.decode(step[0].tolist()))}
                     for n, step in zip(self.generator.level_lens, out.trajectory)
                 ],
             }
@@ -106,7 +107,7 @@ class PrdService:
                 tokens, nfe = self.baseline.generate(prompt, self.vocab.eos_id, temperature=temperature, top_k=20)
                 ids = tokens[0].tolist()
                 seconds = time.perf_counter() - began
-                result["baseline"] = self._describe(self.vocab.decode(ids), nfe, seconds)
+                result["baseline"] = self._describe(idea, self.vocab.decode(ids), nfe, seconds, "autoregressive baseline")
         return result
 
     @staticmethod
@@ -114,11 +115,14 @@ class PrdService:
         return critique_to_dict(critique(text))
 
     @staticmethod
-    def _describe(text: str, nfe: int, seconds: float) -> dict:
+    def _describe(idea: str, text: str, nfe: int, seconds: float, model: str) -> dict:
+        result = critique(text)
+        label = f"TinyPRD ({model}, {nfe} forward passes) · critic {result.overall:.1f}/10"
         return {
             "text": text,
+            "markdown": to_markdown(text, idea, generated_by=label),
             "sections": parse_sections(text),
-            "critic": critique_to_dict(critique(text)),
+            "critic": critique_to_dict(result),
             "nfe": nfe,
             "seconds": seconds,
         }
