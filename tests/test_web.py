@@ -29,6 +29,9 @@ def test_service_returns_prd_levels_and_critique(service):
     assert result["ncm"]["nfe"] == len(SMALL_LEVELS)
     assert 0 <= result["ncm"]["critic"]["overall"] <= 10
     assert result["unknown_words"] == ["for", "reviewers"]
+    stats = result["ncm"]
+    assert stats["tokens"] <= SMALL_LEVELS[-1] and stats["tokens_per_second"] >= 0
+    assert stats["markdown"].startswith("# PRD:")
 
 
 def test_service_rejects_empty_idea(service):

@@ -6,162 +6,217 @@
 <title>TinyPRD</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📄</text></svg>">
 <style>
-  /* ---- farver: lyst og mørkt tema ----------------------------------------- */
+  /* ==== Farver: lyst og mørkt tema ========================================= */
   :root {
-    --bg: #ffffff; --ink: #0d0d0d; --muted: #6e6e6e; --faint: #9b9b9b; --line: #e5e5e5;
-    --bubble: #f4f4f4; --composer: #ffffff; --hover: #f0f0f0; --send: #0d0d0d; --send-ink: #ffffff;
-    --good: #10a37f; --warn: #d97706; --bad: #dc2626;
-    --shadow: 0 0 0 1px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .06);
+    --bg: #ffffff; --ink: #0d0d0d; --muted: #5d5d5d; --faint: #8f8f8f; --line: #ececec;
+    --soft: #f9f9f9; --bubble: #f4f4f4; --hover: #f2f2f2; --composer: #ffffff;
+    --accent: #10a37f; --warn: #e3a008; --bad: #e5484d;
+    --send: #0d0d0d; --send-ink: #ffffff;
+    --composer-shadow: 0 0 0 1px rgb(0 0 0 / .08), 0 6px 24px -6px rgb(0 0 0 / .10);
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #212121; --ink: #ececec; --muted: #b4b4b4; --faint: #8f8f8f; --line: #3a3a3a;
-      --bubble: #303030; --composer: #303030; --hover: #2f2f2f; --send: #ececec; --send-ink: #0d0d0d;
-      --shadow: 0 0 0 1px rgb(255 255 255 / .06);
+      --bg: #212121; --ink: #ececec; --muted: #b4b4b4; --faint: #8b8b8b; --line: #333333;
+      --soft: #2a2a2a; --bubble: #303030; --hover: #2f2f2f; --composer: #303030;
+      --send: #ececec; --send-ink: #0d0d0d;
+      --composer-shadow: 0 0 0 1px rgb(255 255 255 / .06);
     }
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font: 16px/1.65 ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-    display: flex; flex-direction: column;
+    margin: 0; background: var(--bg); color: var(--ink); display: flex; flex-direction: column;
+    font: 15.5px/1.7 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
   button, textarea, input { font: inherit; color: inherit; }
   button { cursor: pointer; }
   .hidden { display: none !important; }
-  svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
-  /* ---- top -------------------------------------------------------------------- */
-  .top { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; position: relative; }
-  .brand { font-weight: 600; font-size: 18px; padding: 4px 8px; }
-  .brand span { color: var(--faint); font-weight: 400; }
-  .icon-btn { background: none; border: 0; border-radius: 8px; padding: 8px; color: var(--muted); display: inline-flex; }
+  /* ==== Topbjælke ============================================================ */
+  .top { display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 12px; position: relative; }
+  .brand { display: flex; align-items: baseline; gap: 8px; padding: 6px 10px; font-weight: 600; font-size: 17px; }
+  .brand small { font-weight: 400; font-size: 13px; color: var(--faint); }
+  .icon-btn { background: none; border: 0; border-radius: 10px; width: 38px; height: 38px; display: inline-grid; place-items: center; color: var(--muted); }
   .icon-btn:hover { background: var(--hover); color: var(--ink); }
+  .icon-btn svg { width: 20px; height: 20px; }
   .settings {
-    position: absolute; right: 14px; top: 52px; z-index: 5; width: 270px; background: var(--composer);
-    border-radius: 14px; box-shadow: var(--shadow), 0 12px 32px rgb(0 0 0 / .12); padding: 14px 16px; font-size: 14px;
+    position: absolute; right: 12px; top: 54px; z-index: 10; width: 280px; padding: 8px;
+    background: var(--composer); border-radius: 16px; box-shadow: var(--composer-shadow), 0 16px 40px rgb(0 0 0 / .12);
   }
-  .settings label { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; }
+  .settings label { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14px; }
+  .settings label:hover { background: var(--hover); }
   .settings input[type=range] { width: 110px; accent-color: var(--ink); }
   .settings input[type=checkbox] { accent-color: var(--ink); width: 16px; height: 16px; }
-  .settings small { color: var(--faint); display: block; margin-top: 4px; line-height: 1.4; }
+  .settings p { margin: 4px 12px 8px; font-size: 12px; color: var(--faint); line-height: 1.5; }
 
-  /* ---- samtalen ----------------------------------------------------------------- */
+  /* ==== Samtalen ================================================================ */
   .scroll { flex: 1; overflow-y: auto; }
-  .thread { max-width: 768px; margin: 0 auto; padding: 8px 20px 32px; }
-  .msg-user { display: flex; justify-content: flex-end; margin: 24px 0; }
-  .msg-user div { background: var(--bubble); border-radius: 22px; padding: 10px 18px; max-width: 80%; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .msg-bot { margin: 24px 0 40px; }
+  .thread { max-width: 760px; margin: 0 auto; padding: 12px 24px 40px; }
+  .msg-user { display: flex; justify-content: flex-end; margin: 28px 0 22px; }
+  .msg-user div { background: var(--bubble); border-radius: 24px; padding: 10px 20px; max-width: 75%; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg-bot { margin-bottom: 48px; }
 
-  /* Markdown i svarene */
-  .md h1 { font-size: 24px; line-height: 1.3; margin: 0 0 14px; font-weight: 650; }
-  .md h2 { font-size: 18px; margin: 26px 0 8px; font-weight: 600; }
-  .md p { margin: 0 0 10px; }
-  .md ul { margin: 0 0 10px; padding-left: 22px; }
-  .md li { margin: 3px 0; }
-  .md blockquote { margin: 0 0 14px; padding: 2px 0 2px 14px; border-left: 3px solid var(--line); color: var(--muted); }
-  .md table { border-collapse: collapse; font-size: 14px; margin: 0 0 6px; }
-  .md td { padding: 4px 16px 4px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-  .md tr:last-child td { border-bottom: 0; }
-  .md.drafting { color: var(--muted); }
+  /* "Tænkte i …"-linjen over svaret, ligesom ChatGPT */
+  .thought { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 0; margin: 0 0 12px; color: var(--faint); font-size: 14px; }
+  .thought:hover { color: var(--ink); }
+  .thought svg { width: 14px; height: 14px; transition: transform .15s; }
+  .thought[aria-expanded="true"] svg { transform: rotate(90deg); }
+  .shimmer { background: linear-gradient(90deg, var(--faint) 0%, var(--ink) 50%, var(--faint) 100%); background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 1.4s linear infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
 
-  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-top: 10px; color: var(--muted); }
-  .act { background: none; border: 0; border-radius: 8px; padding: 6px 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  /* ==== Dokument-kortet (prd.md) =================================================== */
+  .doc { border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--bg); position: relative; }
+  .doc-bar { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 8px 0 16px; background: var(--soft); border-bottom: 1px solid var(--line); }
+  .doc-name { display: flex; align-items: center; gap: 8px; font: 13px var(--mono); color: var(--muted); flex: 1; min-width: 0; }
+  .doc-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .doc-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 13px; }
+  .doc-btn:hover { background: var(--hover); color: var(--ink); }
+  .doc-btn svg { width: 16px; height: 16px; }
+  .progress { position: absolute; left: 0; top: 45px; height: 2px; background: var(--accent); transition: width .14s linear; }
+  .doc-body { padding: 26px 32px 22px; }
+  @media (max-width: 600px) { .doc-body { padding: 20px; } .thread { padding: 8px 16px 32px; } }
+
+  /* Markdown */
+  .md h1 { font-size: 22px; line-height: 1.3; margin: 0 0 12px; font-weight: 650; letter-spacing: -.01em; }
+  .md h2 { font-size: 16px; margin: 22px 0 6px; font-weight: 600; }
+  .md p { margin: 0 0 8px; }
+  .md ul { margin: 0 0 8px; padding-left: 20px; }
+  .md li { margin: 2px 0; padding-left: 2px; }
+  .md li::marker { color: var(--faint); }
+  .md blockquote { margin: 0 0 16px; color: var(--muted); font-style: italic; }
+  .md blockquote strong { font-style: normal; }
+  .md table { border-collapse: collapse; font-size: 13px; margin: 0 0 4px; width: 100%; }
+  .md td { padding: 5px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  .md td:first-child { width: 130px; color: var(--faint); }
+  .md td:first-child strong { font-weight: 500; }
+  .md tr:first-child td { border-top: 0; }
+  .md.drafting { color: var(--faint); }
+  .md.drafting h1, .md.drafting h2 { color: var(--muted); }
+
+  /* ==== Knapper og tal under svaret ================================================ */
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-top: 10px; }
+  .act { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 13px; }
   .act:hover, .act[aria-pressed="true"] { background: var(--hover); color: var(--ink); }
-  .meta { font-size: 13px; color: var(--faint); margin-left: 6px; }
+  .act svg { width: 16px; height: 16px; }
+  .score-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .stats-line { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 10px 0; font: 12px var(--mono); color: var(--faint); }
+  .stats-line b { color: var(--muted); font-weight: 500; }
 
-  .panel { margin-top: 12px; padding: 16px 18px; border-radius: 16px; background: var(--bubble); font-size: 14px; }
-  .panel h3 { font-size: 14px; margin: 0 0 10px; font-weight: 600; }
-  .row { display: flex; align-items: center; gap: 12px; }
-  .row input[type=range] { flex: 1; accent-color: var(--ink); }
-  .level-label { color: var(--muted); font-size: 13px; margin-top: 6px; }
-  .meter { display: grid; grid-template-columns: 100px 1fr 32px; align-items: center; gap: 10px; margin: 6px 0; }
+  .panel { margin-top: 10px; padding: 18px 20px; border-radius: 16px; background: var(--soft); border: 1px solid var(--line); font-size: 14px; }
+  .panel h3 { font-size: 14px; margin: 0 0 12px; font-weight: 600; }
+  .panel-row { display: flex; align-items: center; gap: 12px; }
+  .panel-row input[type=range] { flex: 1; accent-color: var(--ink); }
+  .play { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); display: grid; place-items: center; }
+  .play svg { width: 14px; height: 14px; }
+  .hint { color: var(--faint); font-size: 13px; margin-top: 8px; }
+
+  .meter { display: grid; grid-template-columns: 110px 1fr 34px; align-items: center; gap: 12px; margin: 7px 0; }
   .meter i { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; display: block; }
-  .meter em { display: block; height: 100%; background: var(--good); }
+  .meter em { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
   .meter em.mid { background: var(--warn); }
   .meter em.low { background: var(--bad); }
-  .panel ul { margin: 10px 0 0; padding-left: 18px; }
-  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  .compare-grid .md { font-size: 13px; }
-  .compare-grid .md h1 { font-size: 16px; }
-  .compare-grid .md h2 { font-size: 14px; margin-top: 14px; }
+  .meter span:last-child { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .panel ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); }
+
+  .stats { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .stats th { text-align: right; font-weight: 500; color: var(--faint); padding: 0 0 8px 12px; }
+  .stats th:first-child, .stats td:first-child { text-align: left; padding-left: 0; }
+  .stats td { text-align: right; padding: 7px 0 7px 12px; border-top: 1px solid var(--line); font-family: var(--mono); }
+  .stats td:first-child { font-family: inherit; color: var(--muted); }
+  .bar { height: 6px; border-radius: 3px; background: var(--accent); margin-top: 4px; }
+  .bar.base { background: var(--faint); }
+  .speed { margin-top: 16px; display: grid; gap: 10px; font-size: 13px; }
+  .speed div span { display: flex; justify-content: space-between; color: var(--muted); }
+  .speed div span b { font: 12px var(--mono); color: var(--ink); }
+
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .compare-grid .md { font-size: 13px; line-height: 1.6; }
+  .compare-grid .md h1 { font-size: 15px; }
+  .compare-grid .md h2 { font-size: 13px; margin-top: 12px; }
+  .compare-grid .md table { display: none; }
   @media (max-width: 700px) { .compare-grid { grid-template-columns: 1fr; } }
 
-  .thinking { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--ink); animation: pulse 1s ease-in-out infinite; }
-  @keyframes pulse { 50% { transform: scale(.6); opacity: .5; } }
-
-  /* ---- startside (tom samtale) ----------------------------------------------- */
-  body.empty .scroll { flex: 0 0 auto; }
-  body.empty .dock { flex: 1; display: flex; flex-direction: column; justify-content: center; padding-bottom: 12vh; }
-  .hello { text-align: center; font-size: 28px; font-weight: 500; margin: 0 0 26px; letter-spacing: -.01em; }
-  .suggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
-  .suggestion { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 7px 14px; font-size: 14px; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* ==== Startside ===================================================================== */
+  body.empty .scroll { flex: 0; }
+  body.empty .dock { flex: 1; display: flex; flex-direction: column; justify-content: center; padding-bottom: 14vh; }
+  .hello { text-align: center; font-size: 28px; font-weight: 500; letter-spacing: -.02em; margin: 0 0 28px; }
+  .suggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 18px auto 0; max-width: 760px; }
+  .suggestion { height: 38px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--muted); font-size: 14px; }
   .suggestion:hover { background: var(--hover); color: var(--ink); }
   body:not(.empty) .hello, body:not(.empty) .suggestions { display: none; }
 
-  /* ---- skrivefeltet ------------------------------------------------------------- */
-  .dock { padding: 0 20px 12px; }
+  /* ==== Skrivefeltet =================================================================== */
+  .dock { padding: 0 24px 14px; }
   .composer {
-    max-width: 768px; margin: 0 auto; background: var(--composer); border-radius: 28px; box-shadow: var(--shadow);
-    display: flex; align-items: flex-end; gap: 8px; padding: 10px 10px 10px 20px;
+    width: 100%; max-width: 760px; margin: 0 auto; display: flex; align-items: flex-end; gap: 10px;
+    background: var(--composer); border-radius: 28px; box-shadow: var(--composer-shadow); padding: 10px 10px 10px 22px;
   }
-  .composer textarea { flex: 1; border: 0; outline: 0; resize: none; background: none; max-height: 220px; padding: 6px 0; line-height: 1.5; }
+  .composer textarea { flex: 1; min-width: 0; height: 36px; max-height: 200px; border: 0; outline: 0; resize: none; background: none; padding: 6px 0; line-height: 24px; }
   .composer textarea::placeholder { color: var(--faint); }
-  .send { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--send); color: var(--send-ink); display: grid; place-items: center; }
-  .send:disabled { opacity: .25; cursor: default; }
+  .send { width: 36px; height: 36px; flex: none; border-radius: 50%; border: 0; background: var(--send); color: var(--send-ink); display: grid; place-items: center; transition: opacity .15s; }
+  .send svg { width: 18px; height: 18px; stroke-width: 2.2; }
+  .send:disabled { opacity: .2; cursor: default; }
   .fine { text-align: center; font-size: 12px; color: var(--faint); margin: 10px 0 0; }
   .fine a { color: inherit; }
 </style>
 </head>
 <body class="empty">
-  <div class="top">
-    <div class="brand">TinyPRD <span>NCM</span></div>
+  <header class="top">
+    <div class="brand">TinyPRD <small id="model-info">NCM</small></div>
     <div>
-      <button class="icon-btn" id="new" title="Ny PRD">
+      <button class="icon-btn" id="new" title="Ny PRD" aria-label="Ny PRD">
         <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       </button>
-      <button class="icon-btn" id="settings-btn" title="Indstillinger">
-        <svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+      <button class="icon-btn" id="settings-btn" title="Indstillinger" aria-label="Indstillinger">
+        <svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
       </button>
     </div>
     <div class="settings hidden" id="settings">
       <label>Kreativitet <input type="range" id="temperature" min="0" max="1.2" step="0.1" value="0"></label>
       <label id="compare-row">Sammenlign med ord-for-ord <input type="checkbox" id="compare" checked></label>
-      <small id="device"></small>
+      <p id="device"></p>
     </div>
-  </div>
+  </header>
 
-  <div class="scroll" id="scroll"><div class="thread" id="thread"></div></div>
+  <main class="scroll" id="scroll"><div class="thread" id="thread"></div></main>
 
   <div class="dock">
     <h1 class="hello">Hvilken idé skal vi forme?</h1>
     <form class="composer" id="composer">
-      <textarea id="input" rows="1" placeholder="Beskriv en produktidé på engelsk … eller indsæt en PRD for at få point"></textarea>
-      <button class="send" id="send" type="submit" disabled title="Send">
+      <textarea id="input" rows="1" placeholder="Beskriv en produktidé på engelsk"></textarea>
+      <button class="send" id="send" type="submit" disabled aria-label="Send">
         <svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
       </button>
     </form>
     <div class="suggestions" id="suggestions"></div>
-    <p class="fine">TinyPRD kender ca. 750 engelske ord og kan lave fejl · <a href="https://github.com/Pallepadehat/tinyprd">GitHub</a></p>
+    <p class="fine">TinyPRD er en lille skolemodel med ca. 750 engelske ord og kan lave fejl. Indsæt en PRD, der starter med #, for at få point. · <a href="https://github.com/Pallepadehat/tinyprd">GitHub</a></p>
   </div>
 
 <script>
-// ===========================================================================
-// Små hjælpere
-// ===========================================================================
+// =============================================================================
+// Hjælpere
+// =============================================================================
 const $ = (id) => document.getElementById(id);
-const escape = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-const number = (x, digits = 1) => x.toLocaleString("da-DK", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const escape = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const number = (x, digits = 0) => x.toLocaleString("da-DK", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const icon = (path) => `<svg viewBox="0 0 24 24">${path}</svg>`;
-const ICONS = {
-  copy: icon('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>'),
-  check: icon('<path d="M20 6 9 17l-5-5"/>'),
-  download: icon('<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>'),
-  layers: icon('<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>'),
-  star: icon('<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9Z"/>'),
-  compare: icon('<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/>'),
+const ms = (seconds) => seconds < 0.1 ? `${number(seconds * 1000, 1)} ms` : `${number(seconds, 2)} s`;
+const millions = (n) => `${number(n / 1e6, 1)}M`;
+const svg = (path) => `<svg viewBox="0 0 24 24">${path}</svg>`;
+const ICON = {
+  file: svg('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/>'),
+  copy: svg('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>'),
+  check: svg('<path d="M20 6 9 17l-5-5"/>'),
+  download: svg('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
+  layers: svg('<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>'),
+  compare: svg('<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/>'),
+  chart: svg('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
+  chevron: svg('<path d="m9 6 6 6-6 6"/>'),
+  play: svg('<path d="M7 4v16l13-8Z" fill="currentColor"/>'),
 };
 
 async function api(path, body) {
@@ -172,10 +227,10 @@ async function api(path, body) {
   return data;
 }
 
-// ===========================================================================
-// En lille Markdown-renderer. Den kan præcis det, vores prd.md bruger:
-// overskrifter, citat, tabel, punktlister, afsnit og **fed**.
-// ===========================================================================
+// =============================================================================
+// Lille Markdown-renderer: præcis det, vores prd.md bruger
+// (overskrifter, citat, tabel, punktlister, afsnit og **fed**).
+// =============================================================================
 function renderMarkdown(markdown) {
   const inline = (s) => escape(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   const html = [];
@@ -191,7 +246,7 @@ function renderMarkdown(markdown) {
     if (line.startsWith("|")) {
       if (list) flush();
       const cells = line.slice(1, -1).split("|").map((c) => c.trim());
-      if (cells.every((c) => /^-*$/.test(c))) continue;  // overskrift-række eller skillelinje
+      if (cells.every((c) => /^-*$/.test(c))) continue;  // tom overskrift-række og skillelinje
       (table ||= []).push(`<tr>${cells.map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`);
       continue;
     }
@@ -214,117 +269,165 @@ const CRITIC_NAMES = {
 function renderCritic(critic) {
   const meters = Object.entries(critic.scores).map(([name, score]) => {
     const level = score >= 8 ? "" : score >= 5 ? "mid" : "low";
-    return `<div class="meter"><span>${CRITIC_NAMES[name] || name}</span><i><em class="${level}" style="width:${score * 10}%"></em></i><span>${number(score)}</span></div>`;
+    return `<div class="meter"><span>${CRITIC_NAMES[name] || name}</span><i><em class="${level}" style="width:${score * 10}%"></em></i><span>${number(score, 1)}</span></div>`;
   }).join("");
   const feedback = critic.feedback.length ? `<ul>${critic.feedback.map((f) => `<li>${escape(f)}</li>`).join("")}</ul>` : "";
-  return `<h3>Kritikeren: ${number(critic.overall)} / 10</h3>${meters}${feedback}`;
+  return `<h3>Kritikeren · ${number(critic.overall, 1)} / 10</h3>${meters}${feedback}`;
 }
 
-// ===========================================================================
+function renderStats(ncm, base) {
+  const rows = [
+    ["Forward passes", (r) => number(r.nfe)],
+    ["Tokens (ord)", (r) => number(r.tokens)],
+    ["Tid i alt", (r) => ms(r.seconds)],
+    ["Tokens / sekund", (r) => number(r.tokens_per_second)],
+    ["Tokens / forward pass", (r) => number(r.tokens_per_pass, 1)],
+    ["Tid / forward pass", (r) => `${number(r.ms_per_pass, 2)} ms`],
+    ["Parametre", (r, which) => millions(state.info.parameters[which])],
+    ["Kritiker", (r) => `${number(r.critic.overall, 1)} / 10`],
+  ];
+  const head = `<tr><th></th><th>NCM</th>${base ? "<th>Ord-for-ord</th>" : ""}</tr>`;
+  const body = rows.map(([label, f]) => `<tr><td>${label}</td><td>${f(ncm, "ncm")}</td>${base ? `<td>${f(base, "baseline")}</td>` : ""}</tr>`).join("");
+  let bars = "";
+  if (base) {
+    const top = Math.max(ncm.tokens_per_second, base.tokens_per_second);
+    bars = `<div class="speed">
+      <div><span>NCM <b>${number(ncm.tokens_per_second)} tok/s</b></span><div class="bar" style="width:${100 * ncm.tokens_per_second / top}%"></div></div>
+      <div><span>Ord-for-ord <b>${number(base.tokens_per_second)} tok/s</b></span><div class="bar base" style="width:${Math.max(1, 100 * base.tokens_per_second / top)}%"></div></div>
+    </div>`;
+  }
+  return `<h3>Statistik · ${escape(state.info.deviceName)}</h3><table class="stats">${head}${body}</table>${bars}`;
+}
+
+// =============================================================================
 // Samtalen
-// ===========================================================================
+// =============================================================================
+const state = { info: null };
 const thread = $("thread");
 const scrollDown = () => { $("scroll").scrollTop = $("scroll").scrollHeight; };
 
 function addUser(text) {
   document.body.classList.remove("empty");
-  const node = document.createElement("div");
-  node.className = "msg-user";
-  node.innerHTML = `<div>${escape(text)}</div>`;
-  thread.append(node);
+  thread.insertAdjacentHTML("beforeend", `<div class="msg-user"><div>${escape(text)}</div></div>`);
 }
 
 function addBot() {
   const node = document.createElement("div");
   node.className = "msg-bot";
-  node.innerHTML = `<span class="thinking"></span>`;
+  node.innerHTML = `<div class="thought"><span class="shimmer">Former idéen …</span></div>`;
   thread.append(node);
   scrollDown();
   return node;
 }
 
-function fileName(markdown) {
-  const title = (markdown.match(/^# PRD: (.+)$/m) || [, "prd"])[1];
-  return `prd-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "prd"}.md`;
-}
+const fileName = (markdown) => {
+  const title = (markdown.match(/^# PRD: (.+)$/m) || [, ""])[1].toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return title ? `prd-${title}.md` : "prd.md";
+};
 
 function download(markdown) {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([markdown], { type: "text/markdown" }));
   link.download = fileName(markdown);
   link.click();
-  URL.revokeObjectURL(link.href);
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 
-// Svar på en idé: PRD'en "kommer i fokus" niveau for niveau, og derefter
-// kommer knapperne: kopier, download prd.md, lagene, kritikeren og sammenlign.
 async function answerIdea(node, result) {
-  const levels = result.levels;
-  node.innerHTML = `<div class="md drafting"></div>`;
-  const md = node.firstChild;
-  for (const level of levels.slice(0, -1)) {   // groft til fint, i stedet for ord for ord
-    md.innerHTML = renderMarkdown(level.markdown);
-    await sleep(140);
-  }
-  md.classList.remove("drafting");
-  md.innerHTML = renderMarkdown(result.ncm.markdown);
-
-  const ncm = result.ncm, base = result.baseline;
-  const speed = base
-    ? `${ncm.nfe} forward passes · ${number(base.nfe / ncm.nfe, 0)}× færre end ord-for-ord`
-    : `${ncm.nfe} forward passes · ${number(ncm.seconds * 1000, 0)} ms`;
-  const unknown = result.unknown_words.length
-    ? `<div class="panel">Ukendte ord blev ignoreret: <b>${result.unknown_words.map(escape).join(", ")}</b>. Prøv at omformulere.</div>` : "";
-
-  node.insertAdjacentHTML("beforeend", `${unknown}
-    <div class="actions">
-      <button class="act" data-do="copy" title="Kopier Markdown">${ICONS.copy}</button>
-      <button class="act" data-do="download" title="Download prd.md">${ICONS.download} prd.md</button>
-      <button class="act" data-panel="levels">${ICONS.layers} Lagene</button>
-      <button class="act" data-panel="critic">${ICONS.star} ${number(ncm.critic.overall)}/10</button>
-      ${base ? `<button class="act" data-panel="compare">${ICONS.compare} Sammenlign</button>` : ""}
-      <span class="meta">${speed}</span>
-    </div>
-    <div class="panel hidden" data-name="levels">
-      <h3>Se PRD'en komme i fokus</h3>
-      <div class="row"><input type="range" min="1" max="${levels.length}" value="${levels.length}"></div>
-      <div class="level-label"></div>
-    </div>
-    <div class="panel hidden" data-name="critic">${renderCritic(ncm.critic)}</div>
-    ${base ? `<div class="panel hidden" data-name="compare">
-      <div class="compare-grid">
-        <div><h3>NCM · ${ncm.nfe} passes · ${number(ncm.critic.overall)}/10</h3><div class="md">${renderMarkdown(ncm.markdown)}</div></div>
-        <div><h3>Ord-for-ord · ${base.nfe} passes · ${number(base.critic.overall)}/10</h3><div class="md">${renderMarkdown(base.markdown)}</div></div>
-      </div></div>` : ""}`);
-
-  // Niveau-skyderen viser teksten efter hvert niveau i selve svaret.
-  const slider = node.querySelector('[data-name="levels"] input');
-  const label = node.querySelector(".level-label");
-  const showLevel = (k) => {
+  const { ncm, baseline: base, levels } = result;
+  const name = fileName(ncm.markdown);
+  node.innerHTML = `
+    <button class="thought" aria-expanded="false">Formet i ${ncm.nfe} forward passes · ${ms(ncm.seconds)} ${ICON.chevron}</button>
+    <div class="doc">
+      <div class="doc-bar">
+        <div class="doc-name">${ICON.file}<span>${escape(name)}</span></div>
+        <button class="doc-btn" data-do="copy">${ICON.copy}<span>Kopier</span></button>
+        <button class="doc-btn" data-do="download">${ICON.download}<span>Download</span></button>
+      </div>
+      <div class="progress"></div>
+      <div class="doc-body"><div class="md drafting"></div></div>
+    </div>`;
+  const md = node.querySelector(".md");
+  const progress = node.querySelector(".progress");
+  const show = (k) => {   // vis teksten efter niveau k (1 … antal niveauer)
     const last = k === levels.length;
     md.classList.toggle("drafting", !last);
     md.innerHTML = renderMarkdown(last ? ncm.markdown : levels[k - 1].markdown);
-    label.textContent = `Niveau ${k} af ${levels.length} · ${levels[k - 1].codes} koder${last ? " · færdig" : ""}`;
+    progress.style.width = last ? "0" : `${(100 * k) / levels.length}%`;
+  };
+
+  // Groft til fint i stedet for ord for ord: vis hvert niveau kort.
+  for (let k = 1; k <= levels.length; k++) { show(k); scrollDown(); await sleep(k === levels.length ? 0 : 160); }
+
+  const unknown = result.unknown_words.length
+    ? `<div class="panel">Ukendte ord blev ignoreret: <b>${result.unknown_words.map(escape).join(", ")}</b>. Prøv at omformulere.</div>` : "";
+  const speedup = base ? `<span><b>${number(base.seconds / ncm.seconds, 1)}×</b> hurtigere end ord-for-ord</span>` : "";
+  node.insertAdjacentHTML("beforeend", `${unknown}
+    <div class="actions">
+      <button class="act" data-panel="levels">${ICON.layers}Lagene</button>
+      <button class="act" data-panel="critic"><span class="score-dot" style="background:${ncm.critic.overall >= 8 ? "var(--accent)" : ncm.critic.overall >= 5 ? "var(--warn)" : "var(--bad)"}"></span>Kritiker ${number(ncm.critic.overall, 1)}</button>
+      ${base ? `<button class="act" data-panel="compare">${ICON.compare}Sammenlign</button>` : ""}
+      <button class="act" data-panel="stats">${ICON.chart}Statistik</button>
+    </div>
+    <div class="stats-line">
+      <span><b>${number(ncm.tokens_per_second)}</b> tok/s</span>
+      <span><b>${number(ncm.tokens)}</b> tokens</span>
+      <span><b>${ncm.nfe}</b> passes</span>
+      <span><b>${number(ncm.ms_per_pass, 2)}</b> ms/pass</span>
+      ${speedup}
+    </div>
+    <div class="panel hidden" data-name="levels">
+      <h3>Se PRD'en komme i fokus</h3>
+      <div class="panel-row">
+        <button class="play" title="Afspil">${ICON.play}</button>
+        <input type="range" min="1" max="${levels.length}" value="${levels.length}">
+      </div>
+      <div class="hint"></div>
+    </div>
+    <div class="panel hidden" data-name="critic">${renderCritic(ncm.critic)}</div>
+    <div class="panel hidden" data-name="stats">${renderStats(ncm, base)}</div>
+    ${base ? `<div class="panel hidden" data-name="compare"><div class="compare-grid">
+      <div><h3>NCM · ${ncm.nfe} passes · ${ms(ncm.seconds)}</h3><div class="md">${renderMarkdown(ncm.markdown)}</div></div>
+      <div><h3>Ord-for-ord · ${base.nfe} passes · ${ms(base.seconds)}</h3><div class="md">${renderMarkdown(base.markdown)}</div></div>
+    </div></div>` : ""}`);
+
+  // Niveau-skyderen
+  const slider = node.querySelector('[data-name="levels"] input');
+  const hint = node.querySelector('[data-name="levels"] .hint');
+  const showLevel = (k) => {
+    slider.value = k;
+    show(k);
+    hint.textContent = `Niveau ${k} af ${levels.length} · ${levels[k - 1].codes} koder${k === levels.length ? " · færdig PRD" : ""}`;
   };
   slider.oninput = () => showLevel(Number(slider.value));
+  node.querySelector(".play").onclick = async () => {
+    for (let k = 1; k <= levels.length; k++) { showLevel(k); await sleep(450); }
+  };
   showLevel(levels.length);
 
-  node.querySelector(".actions").onclick = async (event) => {
-    const button = event.target.closest(".act");
-    if (!button) return;
-    if (button.dataset.do === "copy") {
-      await navigator.clipboard.writeText(ncm.markdown);
-      button.innerHTML = ICONS.check;
-      setTimeout(() => { button.innerHTML = ICONS.copy; }, 1500);
-    } else if (button.dataset.do === "download") {
-      download(ncm.markdown);
-    } else {
-      const panel = node.querySelector(`[data-name="${button.dataset.panel}"]`);
-      const open = panel.classList.toggle("hidden") === false;
-      button.setAttribute("aria-pressed", String(open));
-      if (!open && button.dataset.panel === "levels") { slider.value = levels.length; showLevel(levels.length); }
-    }
+  const panels = {};
+  for (const panel of node.querySelectorAll(".panel[data-name]")) panels[panel.dataset.name] = panel;
+  const toggle = (name, button) => {
+    const open = panels[name].classList.toggle("hidden") === false;
+    if (button) button.setAttribute("aria-pressed", String(open));
+    if (!open && name === "levels") showLevel(levels.length);
+    return open;
   };
+  node.querySelector(".actions").onclick = (event) => {
+    const button = event.target.closest(".act");
+    if (button) toggle(button.dataset.panel, button);
+  };
+  const thought = node.querySelector(".thought");
+  thought.onclick = () => thought.setAttribute("aria-expanded", String(toggle("stats", node.querySelector('[data-panel="stats"]'))));
+
+  for (const button of node.querySelectorAll(".doc-btn")) {
+    button.onclick = async () => {
+      if (button.dataset.do === "download") return download(ncm.markdown);
+      await navigator.clipboard.writeText(ncm.markdown);
+      button.innerHTML = `${ICON.check}<span>Kopieret</span>`;
+      setTimeout(() => { button.innerHTML = `${ICON.copy}<span>Kopier</span>`; }, 1500);
+    };
+  }
   scrollDown();
 }
 
@@ -345,17 +448,17 @@ async function send(text) {
   scrollDown();
 }
 
-// ===========================================================================
+// =============================================================================
 // Skrivefeltet
-// ===========================================================================
+// =============================================================================
 const input = $("input");
 let busy = false;
 const updateSend = () => { $("send").disabled = busy || !input.value.trim(); };
-input.oninput = () => {
-  input.style.height = "auto";
-  input.style.height = `${input.scrollHeight}px`;
-  updateSend();
+const resize = () => {
+  input.style.height = "36px";
+  input.style.height = `${Math.min(input.scrollHeight, 200)}px`;
 };
+input.oninput = () => { resize(); updateSend(); };
 input.onkeydown = (event) => {
   if (event.key === "Enter" && !event.shiftKey && !event.isComposing) { event.preventDefault(); $("composer").requestSubmit(); }
 };
@@ -364,7 +467,7 @@ $("composer").onsubmit = async (event) => {
   const text = input.value.trim();
   if (!text || busy) return;
   input.value = "";
-  input.oninput();
+  resize();
   busy = true; updateSend();
   await send(text);
   busy = false; updateSend();
@@ -373,20 +476,20 @@ $("composer").onsubmit = async (event) => {
 
 $("new").onclick = () => { thread.innerHTML = ""; document.body.classList.add("empty"); input.focus(); };
 $("settings-btn").onclick = (event) => { event.stopPropagation(); $("settings").classList.toggle("hidden"); };
-document.addEventListener("click", (event) => {
-  if (!$("settings").contains(event.target)) $("settings").classList.add("hidden");
-});
+document.addEventListener("click", (event) => { if (!$("settings").contains(event.target)) $("settings").classList.add("hidden"); });
 
-// ===========================================================================
-// Start: hent info om modellerne og forslag til idéer
-// ===========================================================================
+// =============================================================================
+// Start
+// =============================================================================
 api("/api/info").then((info) => {
-  const device = { mps: "Apple GPU", cuda: "NVIDIA GPU", cpu: "CPU" }[info.device] || info.device;
-  $("device").textContent = `Kører på ${device} · ${info.levels.length} niveauer · ${info.vocab_size} ord`;
+  info.deviceName = { mps: "Apple GPU (MPS)", cuda: "NVIDIA GPU", cpu: "CPU" }[info.device] || info.device;
+  state.info = info;
+  $("model-info").textContent = `NCM · ${millions(info.parameters.ncm)} parametre · ${info.levels.length} niveauer`;
+  $("device").textContent = `Kører på ${info.deviceName} · ordforråd ${number(info.vocab_size)} ord`;
   if (!info.has_baseline) { $("compare").checked = false; $("compare-row").classList.add("hidden"); }
-  $("suggestions").innerHTML = info.examples.map((idea) => `<button class="suggestion" title="${escape(idea)}">${escape(idea)}</button>`).join("");
+  $("suggestions").innerHTML = info.examples.map((e) => `<button class="suggestion" data-idea="${escape(e.idea)}" title="${escape(e.idea)}">${escape(e.label)}</button>`).join("");
   for (const chip of $("suggestions").children) {
-    chip.onclick = () => { input.value = chip.title; input.oninput(); $("composer").requestSubmit(); };
+    chip.onclick = () => { input.value = chip.dataset.idea; input.oninput(); $("composer").requestSubmit(); };
   }
 }).catch(() => { $("device").textContent = "Serveren svarer ikke."; });
 input.focus();

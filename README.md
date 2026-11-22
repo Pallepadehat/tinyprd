@@ -120,7 +120,8 @@ i stedet for ord for ord. Under hvert svar kan du:
 - **kopiere** PRD'en som Markdown eller **downloade den som `prd.md`**,
 - åbne **Lagene** og trække i skyderen for at se teksten efter hvert niveau, fra 2 koder til 256,
 - se **kritikerens** point og råd,
-- **sammenligne** med ord-for-ord modellen, side om side.
+- **sammenligne** med ord-for-ord modellen, side om side,
+- se **statistik**: tokens/s, tokens pr. forward pass, ms pr. forward pass og antal parametre for begge modeller.
 
 Indsætter du en tekst, der starter med `#`, får du i stedet kritikerens point på din egen PRD.
 Serveren bruger kun Pythons indbyggede `http.server` og kører kun på din egen maskine.
