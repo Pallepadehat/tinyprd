@@ -21,7 +21,7 @@ from pathlib import Path
 
 import torch
 
-from .config import DATA_DIR, get_preset
+from .config import DATA_DIR, PRESET_NAMES, get_preset
 from .critic import critique
 from .data.prd import parse_sections
 from .markdown import to_markdown
@@ -127,12 +127,12 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("data", help="lav det syntetiske datasæt")
-    p.add_argument("--preset", default="tiny", choices=["tiny", "base", "smoke"])
+    p.add_argument("--preset", default="large", choices=PRESET_NAMES)
     p.set_defaults(func=cmd_data)
 
     for stage in ("tokenizer", "generator", "baseline", "all"):
         p = sub.add_parser(f"train-{stage}", help=f"træn {stage}")
-        p.add_argument("--preset", default="tiny", choices=["tiny", "base", "smoke"])
+        p.add_argument("--preset", default="large", choices=PRESET_NAMES)
         p.set_defaults(func=cmd_train, stage=stage)
 
     p = sub.add_parser("generate", help="skriv en PRD ud fra en idé")

@@ -40,7 +40,7 @@ MEASURABLE_WORDS = {
 # Ord der tyder på et teknisk spørgsmål til engineering.
 TECHNICAL_WORDS = {"data", "api", "engineering", "limits", "prototype", "expose", "technical", "sync"}
 
-MAX_WORDS_ONE_PAGER = 400
+MAX_WORDS_ONE_PAGER = 650  # ca. én side, også med user stories, risici og udrulning
 
 
 @dataclass

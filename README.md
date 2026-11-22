@@ -98,15 +98,30 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-### 1. Lav data og træn (ca. 2 timer på en M3 Pro)
+### 1. Lav data og træn
+
+Den store model (standard) trænes bedst natten over, ca. 6,5 timer på en M3 Pro:
 
 ```bash
-tinyprd data         # laver ~7.000 syntetiske eksempler i data/
-tinyprd train-all    # træner tokenizer → generator → baseline, og gemmer i runs/
+./scripts/train_overnight.sh   # gemmer de gamle data/ og runs/ i archive/, træner og evaluerer
 ```
 
-> Vil du bare se, om alt virker? Kør `tinyprd data --preset smoke && tinyprd train-all --preset smoke`.
-> Det tager under et minut, men modellen bliver ikke god.
+Eller trin for trin:
+
+```bash
+tinyprd data                     # ca. 10.000 syntetiske PRD'er på ca. 365 ord i data/
+tinyprd train-all                # tokenizer → generator → baseline, gemmes i runs/
+tinyprd train-all --preset small # de små modeller fra første version, ca. 2 timer
+```
+
+| Preset | Koncept-tokenizer | Generator | Baseline | Tid (M3 Pro) |
+|---|---|---|---|---|
+| `large` (standard) | 5,0M, 45 min. | 16,6M, 250 min. | 15,0M, samme antal skridt som generatoren | ca. 6,5 timer |
+| `small` | 2,1M, 4.000 skridt | 6M, 3.000 skridt | 5M, 3.000 skridt | ca. 2 timer |
+| `smoke` | mini | mini | mini | under et minut |
+
+> `smoke` er kun til at tjekke, at alt virker. Modellen bliver ikke god.
+> Træningen gemmer et checkpoint hver 20. minut, så et nedbrud ikke koster det hele.
 
 ### 2. Prøv den i browseren 🌐
 

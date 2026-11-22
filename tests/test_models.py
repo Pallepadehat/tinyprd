@@ -66,3 +66,19 @@ def test_generator_trains_and_generates(small_models):
 def test_collapse_repeats_removes_stutter():
     cleaned = collapse_repeats(torch.tensor([[5, 5, 6, 7, 7, 7, 2]]))
     assert cleaned.tolist() == [[5, 6, 7, 2, 2, 2, 2]]  # formen bevares
+
+
+def test_level_by_level_backward_gives_same_gradients(small_models):
+    tokenizer, generator = small_models
+    generator.eval()  # uden dropout, så de to kørsler kan sammenlignes
+    prompt = torch.randint(1, 50, (2, 6))
+    codes = tokenizer.eval().tokenize(torch.randint(0, 50, (2, SMALL_LEVELS[-1])))
+    with torch.no_grad():  # som i træningen: tokenizeren er frosset
+        partials = tokenizer.partials_from_codes(codes)
+
+    generator(prompt, partials, codes).backward()
+    expected = [p.grad.clone() for p in generator.parameters()]
+    generator.zero_grad()
+    generator.backward_level_by_level(prompt, partials, codes)
+    for grad, p in zip(expected, generator.parameters()):
+        assert torch.allclose(grad, p.grad, atol=1e-6)

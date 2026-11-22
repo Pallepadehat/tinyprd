@@ -552,6 +552,66 @@ TECHNICAL_QUESTIONS = (
     "what is the cheapest prototype engineering could build to test this?",
 )
 
+# --------------------------------------------------------------------------
+# Ekstra sektioner til de længere PRD'er: baggrund, user stories, risici og
+# udrulning. De er skrevet én gang pr. mønster (hvordan klarer folk sig i dag,
+# og hvad vinder de?) plus fælles skabeloner, der virker for alle mønstre.
+# --------------------------------------------------------------------------
+
+# Hvordan folk klarer problemet i dag (bruges i "background").
+WORKAROUNDS = {
+    "waiting": "{users} ask in chat or check {tool} by hand to find {objs} that are stuck",
+    "sharing": "{users} send screenshots or exported files to {peers}",
+    "search": "{users} scroll through long lists in {tool} or ask {peers} where things are",
+    "automation": "{users} copy the same details into {tool} by hand for every {obj}",
+    "onboarding": "new {users} rely on {peers} to show them around {tool}",
+    "deadlines": "{users} keep their own notes and calendars to remember when {objs} are due",
+    "permissions": "{users} ask an admin every time someone needs access to {a_obj}",
+    "history": "{users} ask around to find out who changed {a_obj} and why",
+    "reporting": "{users} export data from {tool} and build reports in spreadsheets",
+    "bulk": "{users} open and change {objs} one at a time in {tool}",
+    "mobile": "{users} wait until they are back at a computer to handle {objs}",
+    "templates": "{users} copy an old {obj} and edit it by hand",
+}
+
+# Hvad brugerne vinder (bruges i "so that ..." i user stories).
+BENEFITS = {
+    "waiting": "nothing stalls without anyone noticing",
+    "sharing": "{peers} always see the latest version",
+    "search": "i find what i need in seconds",
+    "automation": "i spend my time on work that needs judgment",
+    "onboarding": "i become productive in my first week",
+    "deadlines": "no {obj} is late by surprise",
+    "permissions": "the right people have access without waiting on an admin",
+    "history": "i can understand and undo mistakes",
+    "reporting": "decisions are based on current numbers",
+    "bulk": "routine cleanup takes minutes instead of hours",
+    "mobile": "i can act right away wherever i am",
+    "templates": "every {obj} starts from a good structure",
+}
+
+WHY_NOW = (
+    "it came up in most recent interviews with {area} customers.",
+    "requests about it have grown every quarter this year.",
+    "it is one of the top complaints in feedback from {users}.",
+    "sales hears about it in almost every {area} deal.",
+)
+
+RISKS = (
+    "{users} may ignore one more signal in {tool}",
+    "data in {tool} may be incomplete or out of date",
+    "scope may grow beyond the appetite if every edge case is included",
+    "{peers} may feel monitored rather than helped",
+    "adoption may stay low if it adds steps to the {obj} workflow",
+    "it may duplicate something {tool} already offers",
+)
+
+ROLLOUT = (
+    "start with one {area} team as a pilot, then open it to all {users} after two weeks.",
+    "ship behind a feature flag to ten percent of {users} and compare the success metrics.",
+    "release to internal {users} first, fix the rough edges, then roll out to customers.",
+)
+
 # Hvordan en person begynder at beskrive en idé. "{core}" er mønstrets kerne.
 IDEA_OPENERS = (
     "i want to build something that {core}.",
@@ -613,21 +673,36 @@ def make_record(domain: Domain, pattern: Pattern, rng: random.Random) -> PrdReco
         chosen = sorted(rng.sample(range(len(options)), k))
         return [fill(options[i], domain) for i in chosen]
 
-    questions = pick(pattern.questions, 2)
+    questions = pick(pattern.questions, rng.choice((2, 3)))
     questions.append(fill(rng.choice(TECHNICAL_QUESTIONS), domain))
     if mentioned_solutions:
         # Personen sprang til en løsning. En god PM holder den som en hypotese.
         questions.append(f"is it enough to {mentioned_solutions[0]}, or is that one option among several?")
 
+    scope = pick(pattern.scope, rng.choice((3, 4)))
+    # User stories bygges af scope-punkterne: "as a <bruger>, i want to <scope>, so that <gevinst>."
+    benefit = fill(BENEFITS[pattern.key], domain)
+    stories = [f"as {with_article(domain.user)}, i want to {item}, so that {benefit}." for item in scope[:2]]
+    stories.append(f"as one of the {domain.peers}, i want to see the result without extra work in {domain.tool}.")
+
+    background = (
+        "today " + fill(WORKAROUNDS[pattern.key], domain) + ". "
+        + fill(rng.choice(WHY_NOW), domain)
+    )
+
     return PrdRecord(
         idea=idea,
         intent=f"{domain.obj} {pattern.label}",
         problem=fill(rng.choice(pattern.problem), domain),
+        background=background,
         users=f"primary: {domain.users}. secondary: {domain.peers}.",
+        user_stories=stories,
         outcome=fill(rng.choice(pattern.outcome), domain),
-        success_metrics=pick(pattern.metrics, 3),
-        scope=pick(pattern.scope, 3),
-        non_goals=pick(pattern.non_goals, 2),
+        success_metrics=pick(pattern.metrics, rng.choice((3, 4))),
+        scope=scope,
+        non_goals=pick(pattern.non_goals, rng.choice((2, 3))),
+        risks=pick(RISKS, 2),
+        rollout=fill(rng.choice(ROLLOUT), domain),
         appetite=rng.choice(pattern.appetite),
         open_questions=questions,
         domain=domain.key,

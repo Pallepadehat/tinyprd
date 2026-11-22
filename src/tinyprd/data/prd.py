@@ -4,8 +4,9 @@ Hvert træningseksempel er en `PrdRecord`. Den gemmer ikke kun det færdige
 dokument, men også *mellemregningerne* (problem, resultat, mål, scope ...),
 så modellen lærer hele kæden:
 
-    rodet idé -> intent -> problem -> brugere -> resultat -> succesmål
-              -> scope -> non-goals -> tidsbudget -> åbne spørgsmål
+    rodet idé -> intent -> problem -> baggrund -> brugere -> user stories
+              -> resultat -> succesmål -> scope -> non-goals -> risici
+              -> udrulning -> tidsbudget -> åbne spørgsmål
 
 Layoutet følger "one-pager"-principperne i docs/PRD_PRINCIPPER.md: problemet
 først og uden løsning, målbare succesmål, et afgrænset scope med tydelige
@@ -29,17 +30,21 @@ from dataclasses import asdict, dataclass, field
 SECTION_ORDER = (
     "intent",
     "problem",
+    "background",
     "users",
+    "user stories",
     "outcome",
     "success metrics",
     "scope",
     "non-goals",
+    "risks",
+    "rollout",
     "appetite",
     "open questions",
 )
 
 # Sektioner der skrives som punktlister i stedet for én sætning.
-LIST_SECTIONS = {"success metrics", "scope", "non-goals", "open questions"}
+LIST_SECTIONS = {"user stories", "success metrics", "scope", "non-goals", "risks", "open questions"}
 
 
 @dataclass
@@ -51,9 +56,13 @@ class PrdRecord:
     problem: str
     users: str
     outcome: str
+    background: str = ""  # hvordan folk klarer sig i dag, og hvorfor nu
+    user_stories: list[str] = field(default_factory=list)  # "as a ..., i want to ..., so that ..."
     success_metrics: list[str] = field(default_factory=list)
     scope: list[str] = field(default_factory=list)
     non_goals: list[str] = field(default_factory=list)
+    risks: list[str] = field(default_factory=list)
+    rollout: str = ""  # hvordan vi udruller og lærer undervejs
     appetite: str = ""  # hvor meget tid problemet er værd, fx "two weeks"
     open_questions: list[str] = field(default_factory=list)
 
@@ -73,18 +82,24 @@ class PrdRecord:
         values = {
             "intent": self.intent,
             "problem": self.problem,
+            "background": self.background,
             "users": self.users,
+            "user stories": self.user_stories,
             "outcome": self.outcome,
             "success metrics": self.success_metrics,
             "scope": self.scope,
             "non-goals": self.non_goals,
+            "risks": self.risks,
+            "rollout": self.rollout,
             "appetite": self.appetite,
             "open questions": self.open_questions,
         }
         lines: list[str] = []
         for name in SECTION_ORDER:
-            lines.append(f"## {name}")
             value = values[name]
+            if not value:
+                continue  # ældre poster uden de nye sektioner
+            lines.append(f"## {name}")
             if name in LIST_SECTIONS:
                 lines.extend(f"- {item}" for item in value)
             else:

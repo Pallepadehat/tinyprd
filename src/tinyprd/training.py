@@ -8,6 +8,11 @@ Rækkefølgen er vigtig:
 
 Alle tre bruger den samme simple løkke: tag et tilfældigt batch, beregn
 loss, tag et skridt med AdamW, og log undervejs.
+
+Hvor længe der trænes, styres af `Schedule`: enten et fast antal skridt
+(`steps`) eller et tidsbudget (`minutes`). Med et tidsbudget falder
+learning rate i takt med *tiden*, så modellen er færdig-afkølet, præcis når
+tiden er gået. Det er praktisk til en træning, der skal køre natten over.
 """
 
 from __future__ import annotations
@@ -38,12 +43,14 @@ from .runtime import (
 )
 
 
-def learning_rate(step: int, total: int, peak: float, warmup: int) -> float:
-    """Lineær opvarmning, derefter cosinus-fald ned til 10 % af toppen."""
+def learning_rate(step: int, progress: float, peak: float, warmup: int) -> float:
+    """Lineær opvarmning de første skridt, derefter cosinus-fald ned til 10 % af toppen.
+
+    progress går fra 0 (start) til 1 (slut), målt i skridt eller i tid.
+    """
     if step < warmup:
         return peak * (step + 1) / warmup
-    progress = (step - warmup) / max(1, total - warmup)
-    return peak * (0.1 + 0.9 * 0.5 * (1 + math.cos(math.pi * progress)))
+    return peak * (0.1 + 0.9 * 0.5 * (1 + math.cos(math.pi * min(progress, 1.0))))
 
 
 def make_optimizer(model: torch.nn.Module, lr: float) -> torch.optim.Optimizer:
@@ -55,18 +62,60 @@ def set_lr(optimizer: torch.optim.Optimizer, lr: float) -> None:
         group["lr"] = lr
 
 
+class Schedule:
+    """Hvor længe vi træner, og hvilken learning rate hvert skridt får.
+
+    Er `minutes` sat, trænes der til tiden er gået (og `steps` ignoreres).
+    Ellers trænes der præcis `steps` skridt.
+    """
+
+    def __init__(self, steps: int, minutes: float | None, peak_lr: float, warmup: int):
+        self.steps, self.minutes, self.peak_lr, self.warmup = steps, minutes, peak_lr, warmup
+        self.start = time.time()
+
+    def elapsed_minutes(self) -> float:
+        return (time.time() - self.start) / 60
+
+    def progress(self, step: int) -> float:
+        if self.minutes:
+            return self.elapsed_minutes() / self.minutes
+        return step / max(1, self.steps)
+
+    def done(self, step: int) -> bool:
+        return self.progress(step) >= 1.0
+
+    def lr(self, step: int) -> float:
+        return learning_rate(step, self.progress(step), self.peak_lr, self.warmup)
+
+    def describe(self) -> str:
+        return f"{self.minutes:g} minutter" if self.minutes else f"{self.steps} skridt"
+
+
 class Logger:
     """Skriver loss med jævne mellemrum, så man kan følge med i terminalen."""
 
-    def __init__(self, name: str, total: int, every: int = 100):
-        self.name, self.total, self.every = name, total, every
-        self.start = time.time()
+    def __init__(self, name: str, schedule: Schedule, every: int = 100):
+        self.name, self.schedule, self.every = name, schedule, every
 
-    def __call__(self, step: int, **values: float) -> None:
-        if step % self.every and step != self.total - 1:
+    def __call__(self, step: int, force: bool = False, **values: float) -> None:
+        if step % self.every and not force:
             return
         parts = "  ".join(f"{key} {value:.4f}" for key, value in values.items())
-        print(f"[{self.name}] step {step + 1:>5}/{self.total}  {parts}  ({time.time() - self.start:.0f}s)", flush=True)
+        done = min(self.schedule.progress(step), 1.0)
+        print(f"[{self.name}] step {step + 1:>6}  {done:5.1%}  {parts}  "
+              f"({self.schedule.elapsed_minutes():.1f} min)", flush=True)
+
+
+class Autosave:
+    """Gem et checkpoint med jævne mellemrum, så en lang træning ikke går tabt ved et nedbrud."""
+
+    def __init__(self, save, every_minutes: float = 20):
+        self.save, self.every, self.last = save, every_minutes * 60, time.time()
+
+    def __call__(self) -> None:
+        if time.time() - self.last >= self.every:
+            self.save()
+            self.last = time.time()
 
 
 # --------------------------------------------------------------------------
@@ -85,12 +134,20 @@ def train_tokenizer(preset: Presets, runs_dir: Path = RUNS_DIR) -> ConceptTokeni
     model = ConceptTokenizer(cfg, len(vocab), data_cfg.target_len).to(device)
     print(f"Koncept-tokenizer: {count_parameters(model) / 1e6:.1f}M parametre, enhed: {device}")
     optimizer = make_optimizer(model, cfg.lr)
-    log = Logger("tokenizer", cfg.steps)
+    schedule = Schedule(cfg.steps, cfg.minutes, cfg.lr, cfg.warmup_steps)
+    log = Logger("tokenizer", schedule)
     index_stream = batches(len(targets), cfg.batch_size, torch.Generator().manual_seed(data_cfg.seed))
 
+    def save() -> None:
+        save_checkpoint(runs_dir / TOKENIZER_CKPT, model, config=to_dict(cfg), data=to_dict(data_cfg),
+                        vocab_size=len(vocab))
+
+    autosave = Autosave(save)
+    print(f"Træner i {schedule.describe()}")
     model.train()
-    for step in range(cfg.steps):
-        set_lr(optimizer, learning_rate(step, cfg.steps, cfg.lr, cfg.warmup_steps))
+    step = 0
+    while not schedule.done(step):
+        set_lr(optimizer, schedule.lr(step))
         losses = model(targets[next(index_stream).to(device)], vocab.pad_id)
         optimizer.zero_grad(set_to_none=True)
         losses["loss"].backward()
@@ -104,12 +161,12 @@ def train_tokenizer(preset: Presets, runs_dir: Path = RUNS_DIR) -> ConceptTokeni
             utilization = model.reseed_dead_codes()
         log(step, loss=losses["loss"].item(), recon=losses["reconstruction"].item(), vq=losses["vq"].item(),
             **({"brugte_koder": utilization} if utilization is not None and step > 0 else {}))
+        autosave()
+        step += 1
 
+    log(step - 1, force=True, loss=losses["loss"].item(), recon=losses["reconstruction"].item())
     model.eval()
-    save_checkpoint(
-        runs_dir / TOKENIZER_CKPT, model,
-        config=to_dict(cfg), data=to_dict(data_cfg), vocab_size=len(vocab),
-    )
+    save()
     print(f"Gemt: {runs_dir / TOKENIZER_CKPT}")
     return model
 
@@ -169,12 +226,22 @@ def train_generator(preset: Presets, runs_dir: Path = RUNS_DIR) -> NextConceptTr
     ).to(device)
     print(f"Next-concept generator: {count_parameters(model) / 1e6:.1f}M parametre, enhed: {device}")
     optimizer = make_optimizer(model, cfg.lr)
-    log = Logger("generator", cfg.steps)
+    schedule = Schedule(cfg.steps, cfg.minutes, cfg.lr, cfg.warmup_steps)
+    log = Logger("generator", schedule)
     index_stream = batches(len(prompts), cfg.batch_size, torch.Generator().manual_seed(data_cfg.seed))
 
+    def save() -> None:
+        save_checkpoint(
+            runs_dir / GENERATOR_CKPT, model, config=to_dict(cfg), data=to_dict(data_cfg),
+            vocab_size=len(vocab), tokenizer=tok_ckpt["config"], steps=step,
+        )
+
+    autosave = Autosave(save)
+    print(f"Træner i {schedule.describe()}")
     model.train()
-    for step in range(cfg.steps):
-        set_lr(optimizer, learning_rate(step, cfg.steps, cfg.lr, cfg.warmup_steps))
+    step = 0
+    while not schedule.done(step):
+        set_lr(optimizer, schedule.lr(step))
         idx = next(index_stream).to(device)
         clean = [level[idx] for level in all_codes]
 
@@ -183,18 +250,17 @@ def train_generator(preset: Presets, runs_dir: Path = RUNS_DIR) -> NextConceptTr
         with torch.no_grad():
             partials = tokenizer.partials_from_codes(noisy)
 
-        loss = model(prompts[idx], partials, clean)
         optimizer.zero_grad(set_to_none=True)
-        loss.backward()
+        loss = model.backward_level_by_level(prompts[idx], partials, clean)  # sparer hukommelse
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
-        log(step, loss=loss.item())
+        log(step, loss=loss)
+        autosave()
+        step += 1
 
+    log(step - 1, force=True, loss=loss)
     model.eval()
-    save_checkpoint(
-        runs_dir / GENERATOR_CKPT, model,
-        config=to_dict(cfg), data=to_dict(data_cfg), vocab_size=len(vocab), tokenizer=tok_ckpt["config"],
-    )
+    save()
     print(f"Gemt: {runs_dir / GENERATOR_CKPT}")
     return model
 
@@ -206,6 +272,10 @@ def train_generator(preset: Presets, runs_dir: Path = RUNS_DIR) -> NextConceptTr
 
 def train_baseline(preset: Presets, runs_dir: Path = RUNS_DIR) -> AutoregressiveBaseline:
     cfg, data_cfg = preset.baseline, preset.data
+    if cfg.match_generator_steps:
+        generator_ckpt = torch.load(runs_dir / GENERATOR_CKPT, map_location="cpu", weights_only=False)
+        cfg.steps, cfg.minutes = generator_ckpt["steps"], None
+        print(f"Baseline trænes {cfg.steps} skridt, ligesom generatoren")
     seed_everything(data_cfg.seed)
     device = pick_device()
     vocab = load_vocab()
@@ -215,12 +285,20 @@ def train_baseline(preset: Presets, runs_dir: Path = RUNS_DIR) -> Autoregressive
     model = AutoregressiveBaseline(cfg, len(vocab), data_cfg.prompt_len, data_cfg.target_len).to(device)
     print(f"Autoregressiv baseline: {count_parameters(model) / 1e6:.1f}M parametre, enhed: {device}")
     optimizer = make_optimizer(model, cfg.lr)
-    log = Logger("baseline", cfg.steps)
+    schedule = Schedule(cfg.steps, cfg.minutes, cfg.lr, cfg.warmup_steps)
+    log = Logger("baseline", schedule)
     index_stream = batches(len(prompts), cfg.batch_size, torch.Generator().manual_seed(data_cfg.seed))
 
+    def save() -> None:
+        save_checkpoint(runs_dir / BASELINE_CKPT, model, config=to_dict(cfg), data=to_dict(data_cfg),
+                        vocab_size=len(vocab))
+
+    autosave = Autosave(save)
+    print(f"Træner i {schedule.describe()}")
     model.train()
-    for step in range(cfg.steps):
-        set_lr(optimizer, learning_rate(step, cfg.steps, cfg.lr, cfg.warmup_steps))
+    step = 0
+    while not schedule.done(step):
+        set_lr(optimizer, schedule.lr(step))
         idx = next(index_stream).to(device)
         loss = model(prompts[idx], targets[idx], vocab.pad_id)
         optimizer.zero_grad(set_to_none=True)
@@ -228,11 +306,11 @@ def train_baseline(preset: Presets, runs_dir: Path = RUNS_DIR) -> Autoregressive
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
         log(step, loss=loss.item())
+        autosave()
+        step += 1
 
+    log(step - 1, force=True, loss=loss.item())
     model.eval()
-    save_checkpoint(
-        runs_dir / BASELINE_CKPT, model,
-        config=to_dict(cfg), data=to_dict(data_cfg), vocab_size=len(vocab),
-    )
+    save()
     print(f"Gemt: {runs_dir / BASELINE_CKPT}")
     return model

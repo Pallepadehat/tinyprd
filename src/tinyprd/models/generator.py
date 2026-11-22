@@ -150,19 +150,39 @@ class NextConceptTransformer(nn.Module):
         på en rekonstruktion, der kun er nuller.
         """
         before = [torch.zeros_like(partials[0])] + partials[:-1]
+        total_codes = sum(codes.numel() for codes in target_codes)
+        return sum(self.level_loss(prompt, k, before[k], target_codes[k]) for k in range(self.n_levels)) / total_codes
 
-        # Masken er blok-diagonal, så hver blok kan køres for sig: resultatet
-        # er det samme, som hvis alle blokke stod i én lang sekvens, men det er
-        # meget billigere (attention koster længde², og blokkene er korte).
-        total_loss, total_codes = 0.0, 0
+    def level_loss(self, prompt: torch.Tensor, k: int, z_hat_before: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        """Summen af cross-entropy over alle koder i niveau k.
+
+        Masken er blok-diagonal, så hvert niveau kan køres for sig: resultatet
+        er det samme, som hvis alle blokke stod i én lang sekvens, men det er
+        meget billigere (attention koster længde², og blokkene er korte).
+        Hver kode tæller lige meget (artiklens alpha = 0 vægtning).
+        """
+        logits = self.predict_level(prompt, k, z_hat_before)
+        return F.cross_entropy(logits.transpose(1, 2), target, reduction="sum")
+
+    def backward_level_by_level(
+        self, prompt: torch.Tensor, partials: list[torch.Tensor], target_codes: list[torch.Tensor]
+    ) -> float:
+        """Præcis samme gradienter som `self(prompt, partials, target_codes).backward()`, men med langt mindre hukommelse.
+
+        Niveauerne afhænger ikke af hinanden i træning, så vi kan regne loss og
+        backward for ét niveau ad gangen og lade gradienterne lægge sig sammen.
+        Så skal kun ét niveaus mellemregninger ligge i hukommelsen ad gangen,
+        i stedet for alle 9. Det er forskellen på at kunne træne den store model
+        på en Mac med 18 GB eller ej. Returnerer den samlede loss som et tal.
+        """
+        before = [torch.zeros_like(partials[0])] + partials[:-1]
+        total_codes = sum(codes.numel() for codes in target_codes)
+        total = torch.zeros((), device=prompt.device)
         for k in range(self.n_levels):
-            logits = self.predict_level(prompt, k, before[k])
-            # Hver kode tæller lige meget (artiklens alpha = 0 vægtning).
-            total_loss = total_loss + F.cross_entropy(
-                logits.transpose(1, 2), target_codes[k], reduction="sum"
-            )
-            total_codes += target_codes[k].numel()
-        return total_loss / total_codes
+            loss = self.level_loss(prompt, k, before[k], target_codes[k]) / total_codes
+            loss.backward()
+            total += loss.detach()
+        return total.item()
 
     # ---- generering: ét niveau ad gangen ----------------------------------
 

@@ -29,6 +29,7 @@ tomme sektioner springes over.
 
 from __future__ import annotations
 
+import re
 from datetime import date
 
 from .data.prd import LIST_SECTIONS, SECTION_ORDER, parse_sections
@@ -37,17 +38,21 @@ from .data.prd import LIST_SECTIONS, SECTION_ORDER, parse_sections
 # "appetite" står i faktaboksen, så de er ikke med her.
 SECTION_TITLES = {
     "problem": "Problem",
+    "background": "Background",
     "users": "Users",
+    "user stories": "User stories",
     "outcome": "Outcome",
     "success metrics": "Success metrics",
     "scope": "Scope",
     "non-goals": "Non-goals",
+    "risks": "Risks",
+    "rollout": "Rollout",
     "open questions": "Open questions",
 }
 
 
 def _capitalize(text: str) -> str:
-    text = text.strip()
+    text = re.sub(r"\bi\b", "I", text.strip())  # "i want" → "I want"
     return text[:1].upper() + text[1:]
 
 

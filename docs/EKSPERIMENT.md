@@ -1,5 +1,10 @@
 # Eksperimentet
 
+> **Version 2 er på vej.** Resultaterne nedenfor er fra første version (preset `small`: PRD'er på
+> ca. 190 ord, 8 niveauer). Version 2 (preset `large`) skriver længere PRD'er på ca. 365 ord med
+> baggrund, user stories, risici og udrulning, bruger 9 niveauer op til 512 ord og en generator på
+> 16,6M parametre. Resultaterne kommer her, når den er trænet.
+
 ## Forskningsspørgsmål
 
 > **Kan generering fra groft til fint (NCM) gøre en lille sprogmodel god til at forme produktidéer
