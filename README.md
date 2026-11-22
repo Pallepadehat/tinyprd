@@ -22,35 +22,39 @@
 Du skriver en rodet idé:
 
 ```text
-i want to build something that lets developers see which pull requests are
-waiting for reviewers. maybe it could send slack notifications.
+what if we built a tool that lets developers see which pull requests are waiting
+for reviewers? maybe it could send slack notifications.
 ```
 
-TinyPRD former den til en kort, fokuseret PRD, hvor **problemet står først**, **succes kan
-måles**, og det står klart, **hvad der ikke er med**:
+TinyPRD former den til en kort PRD, hvor **problemet står først**, **succes kan måles**, og det
+står klart, **hvad der ikke er med**. Det her er modellens rigtige output, med små fejl og det hele:
 
 ```text
 ## intent
 pull request wait visibility
 ## problem
-developers cannot easily see which pull requests are waiting on reviewers, so work stalls
-without anyone noticing.
+pull requests sit waiting on reviewers for days because nobody can tell which ones are blocked.
+## users
+primary: developers. secondary: reviewers.
 ## outcome
-reduce the time pull requests spend waiting on reviewers.
+pull requests get picked up by reviewers quickly instead of stalling.
 ## success metrics
 - median time a pull request waits for reviewers
-- percent of pull requests picked up within 24 hours
-- number of pull requests waiting more than three days
+- percent of requests picked up within 24 hours
+- median time from creation to completion of a pull request
 ## non-goals
-- automatically assigning reviewers
-- ranking reviewers by speed
+- replacing the pull request workflow in github
+- automatically assigning
+## appetite
+two weeks for first version, then check wait time metrics.
 ## open questions
-- is it enough to send slack notifications, or is that one option among several?
-...
+- is the delay by busy or by poor visibility?
+- what data does github already expose about pull?
+- is it enough to send slack notifications, or is that one option several?
 ```
 
 Læg mærke til, at idéen nævnte en løsning (Slack). PRD'en gør den til et **spørgsmål** i stedet
-for et krav. Det er netop sådan en god PM tænker, og det er det, modellen har lært.
+for et krav, og problemet nævner slet ikke Slack. Sådan tænker en god PM, og det har modellen lært.
 
 ## 🎨 Det særlige: groft til fint
 
@@ -74,7 +78,14 @@ niveau 8 (256 koder)   ███████████████████
 
 Resultaterne står i **[docs/EKSPERIMENT.md](docs/EKSPERIMENT.md)**.
 
-<!-- RESULTS -->
+| Model | Forward passes pr. PRD | Tid pr. PRD (M3 Pro) | Forstår idéen (intent) | Kritiker-score |
+|---|---|---|---|---|
+| **TinyPRD (NCM)** | **8** | **0,006 s** | **100 %** | 9,3 / 10 |
+| Almindelig ord-for-ord model | 200 | 0,13 s | 100 % | 10,0 / 10 |
+
+*Testsættet med produktidéer, modellen aldrig har set.* **NCM er ca. 25 gange hurtigere** og
+forstår idéerne lige så godt, men baseline skriver lidt pænere tekst. Se hele analysen i
+[EKSPERIMENT.md](docs/EKSPERIMENT.md).
 
 ## 🚀 Kom i gang
 
@@ -87,7 +98,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-### 1. Lav data og træn (ca. 30-40 min. på en M3 Pro)
+### 1. Lav data og træn (ca. 2 timer på en M3 Pro)
 
 ```bash
 tinyprd data         # laver ~7.000 syntetiske eksempler i data/

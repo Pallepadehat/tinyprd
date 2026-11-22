@@ -6,6 +6,11 @@ For hvert testsæt genererer begge modeller en PRD for hver idé, og vi måler:
     word_f1     ord-overlap med facit-PRD'en (0-1)
     intent      andel hvor intent-linjen er præcis rigtig
     nfe         antal forward passes pr. PRD (lavere = hurtigere)
+
+Tre modeller sammenlignes:
+    ncm         NCM med oprydning af gentagne ord (standard)
+    ncm_raw     NCM uden oprydning, altså modellens rå output
+    baseline    den autoregressive model
     sek/prd     målt tid pr. PRD på din maskine
 
 To testsæt:
@@ -93,15 +98,15 @@ def evaluate(n_per_split: int = 60, batch_size: int = 32, runs_dir: Path = RUNS_
             "tokenizer_acc_per_level": tokenizer_accuracy(tokenizer, targets.to(device), vocab.pad_id),
         }
 
-        models = {"ncm": "ncm"} | ({"baseline": "baseline"} if baseline else {})
+        models = ["ncm", "ncm_raw"] + (["baseline"] if baseline else [])
         for name in models:
             texts, nfe_total, seconds = [], 0, 0.0
             for start in range(0, len(prompts), batch_size):
                 batch = prompts[start : start + batch_size]
                 _sync(device)
                 began = time.perf_counter()
-                if name == "ncm":
-                    out = generate_ncm(tokenizer, generator, batch)
+                if name.startswith("ncm"):
+                    out = generate_ncm(tokenizer, generator, batch, clean_repeats=(name == "ncm"))
                     tokens, nfe = out.tokens, out.nfe
                 else:
                     tokens, nfe = baseline.generate(batch, vocab.eos_id)
@@ -128,7 +133,7 @@ def print_split(split: str, results: dict) -> None:
     accuracy = results["tokenizer_acc_per_level"]
     print("Tokenizer: ord gendannet efter niveau 1..K: " + "  ".join(f"{a:.0%}" for a in accuracy))
     print(f"{'model':<10} {'critic':>7} {'word_f1':>8} {'intent':>7} {'nfe':>6} {'sek/prd':>9}")
-    for name in ("ncm", "baseline"):
+    for name in ("ncm", "ncm_raw", "baseline"):
         if name in results:
             r = results[name]
             print(f"{name:<10} {r['critic']:7.2f} {r['word_f1']:8.3f} {r['intent']:7.0%} {r['nfe']:6.1f} {r['sec_per_prd']:9.4f}")

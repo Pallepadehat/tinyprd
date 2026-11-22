@@ -122,3 +122,15 @@ def test_critic_flags_common_mistakes():
     result = critique(bad)
     assert result.scores["problem"] < 10 and result.scores["non-goals"] == 0
     assert any("just" in item for item in result.feedback)
+
+
+def test_collapse_repeats_removes_stutter():
+    from tinyprd.sampling import collapse_repeats
+
+    cleaned = collapse_repeats(torch.tensor([[5, 5, 6, 7, 7, 7, 2]]))
+    assert cleaned.tolist() == [[5, 6, 7, 2, 2, 2, 2]]  # formen bevares
+
+
+def test_parser_tolerates_messy_model_output():
+    sections = parse_sections("## problem\nfoo bar. ## users\nprimary: x.\n## appetite one week.")
+    assert sections == {"problem": ["foo bar."], "users": ["primary: x."], "appetite": ["one week."]}

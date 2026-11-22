@@ -9,11 +9,19 @@
 
 Med `trajectory=True` afkoder vi også z_hat efter hvert niveau. Så kan man
 se PRD'en komme i fokus: først en sløret essens, så skarpere detaljer.
+
+Oprydning af gentagelser
+    Alle ord i det sidste niveau vælges *samtidig*, så to nabopositioner kan
+    finde på at vælge samme ord ("their their"). Det er en kendt svaghed ved
+    parallel generering. Den originale NCM-kode bruger "repetition penalties"
+    mod det. Vi gør noget enklere: `collapse_repeats` fjerner et ord, der står
+    lige efter sig selv. Evalueringen måler både med og uden oprydning.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from itertools import pairwise
 
 import torch
 import torch.nn.functional as F
@@ -35,6 +43,19 @@ def sample_from_logits(logits: torch.Tensor, temperature: float, top_k: int) -> 
     return flat.reshape(probs.shape[:-1])
 
 
+def collapse_repeats(tokens: torch.Tensor) -> torch.Tensor:
+    """Fjern ord, der står lige efter sig selv: "a a b b b c" -> "a b c".
+
+    tokens: (B, L). De fjernede pladser flyttes til enden og fyldes med det
+    sidste ord, så formen er uændret; vocab.decode stopper alligevel ved <eos>.
+    """
+    cleaned = []
+    for row in tokens.tolist():
+        kept = [row[0]] + [word for prev, word in pairwise(row) if word != prev]
+        cleaned.append(kept + [kept[-1]] * (len(row) - len(kept)))
+    return torch.tensor(cleaned, device=tokens.device)
+
+
 @dataclass
 class Generation:
     tokens: torch.Tensor  # (B, target_len) ord-id'er for de færdige PRD'er
@@ -51,6 +72,7 @@ def generate_ncm(
     temperature: float = 0.0,
     top_k: int = 0,
     trajectory: bool = False,
+    clean_repeats: bool = True,
 ) -> Generation:
     """Generer PRD'er for et batch af idéer (prompt: (B, prompt_len) ord-id'er)."""
     batch = prompt.shape[0]
@@ -63,7 +85,10 @@ def generate_ncm(
         codes = sample_from_logits(logits, temperature, top_k)
         z_hat = z_hat + tokenizer.level_contribution(k, codes)
         if trajectory:
-            steps.append(tokenizer.decode(z_hat).argmax(-1))
+            step_tokens = tokenizer.decode(z_hat).argmax(-1)
+            steps.append(collapse_repeats(step_tokens) if clean_repeats else step_tokens)
 
     tokens = tokenizer.decode(z_hat).argmax(-1)
+    if clean_repeats:
+        tokens = collapse_repeats(tokens)
     return Generation(tokens=tokens, nfe=generator.n_levels, trajectory=steps)

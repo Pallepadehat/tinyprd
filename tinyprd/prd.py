@@ -21,6 +21,7 @@ tech-branchen. Dokumentationen er på dansk.
 
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
 
 # Rækkefølgen af sektioner i hver PRD. En fast rækkefølge giver modellen et
@@ -96,8 +97,10 @@ def parse_sections(text: str) -> dict[str, list[str]]:
 
     Virker også på modellens output, så den er tilgivende: ukendte
     overskrifter beholdes, tekst før første overskrift ignoreres, og
-    punkttegn ("- ") fjernes.
+    punkttegn ("- ") fjernes. En overskrift midt på en linje ("... ## users")
+    flyttes ned på sin egen linje, for det sker af og til i modellens output.
     """
+    text = re.sub(r"[ \t]*##[ \t]*", "\n## ", text)
     sections: dict[str, list[str]] = {}
     current: str | None = None
     for raw_line in text.splitlines():
@@ -105,8 +108,18 @@ def parse_sections(text: str) -> dict[str, list[str]]:
         if not line:
             continue
         if line.startswith("##"):
-            current = line.lstrip("#").strip()
+            current, rest = _split_heading(line.lstrip("#").strip())
             sections.setdefault(current, [])
+            if rest:
+                sections[current].append(rest)
         elif current is not None:
             sections[current].append(line.removeprefix("-").strip())
     return sections
+
+
+def _split_heading(heading: str) -> tuple[str, str]:
+    """'appetite one week.' -> ('appetite', 'one week.') for kendte sektionsnavne."""
+    for name in sorted(SECTION_ORDER, key=len, reverse=True):
+        if heading.startswith(name):
+            return name, heading[len(name):].strip()
+    return heading, ""
